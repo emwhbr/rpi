@@ -1,0 +1,25 @@
+Build a cross toolchain that generates code compatible with target
+running Raspbian "wheezy" (2013-02-09-wheezy-raspbian.zip).
+
+Toolchain is built and installed on the host (x86_64) computer using
+crosstool-NG. Has been successfully tested on hosts running openSUSE 11.4
+and openSUSE 12.3.
+
+crosstool-NG:	crosstool-ng-1.18.0.tar.bz2
+configuration:	config
+
+Cross toolchain properties
+--------------------------
+GCC:		linaro-4.7-2013.01
+BINUTILS:	2.23
+EGLIBC: 	2.14
+KERNEL HEADERS:	3.6.11
+
+ABI:   		Hard-float ABI
+ARCH:		armv6zk
+CPU:		arm1176jzf-s
+TUNE:		arm1176jzf-s
+FPU:		vfp
+
+PREFIX:		arm-unknown-linux-gnueabihf-
+INSTALL DIR:	/opt/rpi/toolchains/x-tools/arm-unknown-linux-gnueabihf
