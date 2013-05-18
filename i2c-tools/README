@@ -1,0 +1,8 @@
+
+Original source code: i2c-tools-3.1.0.tar.bz2
+
+Modified source code
+--------------------
+24cXX.c:	Added inline functions, taken from i2c-dev.h (Raspbian)
+
+24cXX.h:	Added include of <linux/i2c.h>
