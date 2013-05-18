@@ -110,7 +110,7 @@ extern long eprom24x_get_error_string(long error_code,
 *
 * Name eprom24x_initialize
 *
-* Description TBD
+* Description TBD (Add more info later)
 *
 * Parameters eprom_device IN  Identifies the eprom.
 *            i2c_address  IN  I2C address of eprom.
