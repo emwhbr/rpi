@@ -155,6 +155,36 @@ extern long eprom24x_read_u8(uint32_t addr, uint8_t *value);
 
 /****************************************************************************
 *
+* Name eprom24x_read_u16
+*
+* Description Reads 16 bits from EPROM.
+*
+* Parameters addr    IN   Address to read from.
+*            *value  OUT  Pointer to a buffer to hold data read from EPROM.
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_read_u16(uint32_t addr, uint16_t *value);
+
+/****************************************************************************
+*
+* Name eprom24x_read_u32
+*
+* Description Reads 32 bits from EPROM.
+*
+* Parameters addr    IN   Address to read from.
+*            *value  OUT  Pointer to a buffer to hold data read from EPROM.
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_read_u32(uint32_t addr, uint32_t *value);
+
+/****************************************************************************
+*
 * Name eprom24x_write_u8
 *
 * Description Writes 8 bits to EPROM.

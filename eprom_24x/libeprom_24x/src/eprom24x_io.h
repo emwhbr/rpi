@@ -29,6 +29,9 @@ public:
   void finalize(void);
 
   long read_u8(uint32_t addr, uint8_t *value);
+  long read_u16(uint32_t addr, uint16_t *value);
+  long read_u32(uint32_t addr, uint32_t *value);
+
   long write_u8(uint32_t addr, uint8_t value);
 
 private:
@@ -40,6 +43,8 @@ private:
   int      m_i2c_fd;
 
   void init_members(void);
+
+  void read_data(uint32_t addr, uint8_t *data, uint16_t len);
 };
 
 #endif // __EPROM24x_IO_H__

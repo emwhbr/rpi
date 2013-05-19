@@ -53,6 +53,20 @@ long eprom24x_read_u8(uint32_t addr, uint8_t *value)
 
 /*****************************************************************************/
 
+long eprom24x_read_u16(uint32_t addr, uint16_t *value)
+{
+  return g_object.read_u16(addr, value);
+}
+
+/*****************************************************************************/
+
+long eprom24x_read_u32(uint32_t addr, uint32_t *value)
+{
+  return g_object.read_u32(addr, value);
+}
+
+/*****************************************************************************/
+
 long eprom24x_write_u8(uint32_t addr, uint8_t value)
 {
   return g_object.write_u8(addr, value);

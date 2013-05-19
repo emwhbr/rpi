@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include <linux/i2c.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -159,42 +160,46 @@ void eprom24x_io::finalize(void)
 
 long eprom24x_io::read_u8(uint32_t addr, uint8_t *value)
 {
-  uint8_t i2c_buffer[2];
-
   // Check that address is valid
   if ( addr > (m_eprom_size_in_bytes-1) ) {
     THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
-	      "Specified address(0x%x) too high, max address(0x%x)",
+	      "Specified address(0x%x) too high, max address(0x%x) for 8 bits",
 	      addr, m_eprom_size_in_bytes-1);
   }
 
-  // High address byte shall be sent first
-  if (m_nr_address_bytes == 1) {
-    i2c_buffer[0] = LOW_BYTE(addr);
-  } else {
-    i2c_buffer[0] = HIGH_BYTE(addr);
-    i2c_buffer[1] = LOW_BYTE(addr);
+  read_data(addr, (uint8_t *)value, sizeof(uint8_t));
+
+  return EPROM24x_SUCCESS;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_io::read_u16(uint32_t addr, uint16_t *value)
+{
+  // Check that address is valid
+  if ( addr > (m_eprom_size_in_bytes-2) ) {
+    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
+	      "Specified address(0x%x) too high, max address(0x%x) for 16 bits",
+	      addr, m_eprom_size_in_bytes-2);
   }
 
-  // Step 1 : Set address
-  if ( write(m_i2c_fd,
-	     (void *) i2c_buffer,
-	     (size_t) m_nr_address_bytes) != m_nr_address_bytes ) {
+  read_data(addr, (uint8_t *)value, sizeof(uint16_t));
 
-    THROW_RXP(EPROM24x_LINUX_ERROR, EPROM24x_I2C_OPERATION_FAILED,
-	      "Random read failed to set addr(0x%x), device(%s)",
-	      addr, m_i2c_dev.c_str());
+  return EPROM24x_SUCCESS;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_io::read_u32(uint32_t addr, uint32_t *value)
+{
+  // Check that address is valid
+  if ( addr > (m_eprom_size_in_bytes-4) ) {
+    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
+	      "Specified address(0x%x) too high, max address(0x%x) for 32 bits",
+	      addr, m_eprom_size_in_bytes-4);
   }
 
-  // Step 2 : Read data byte
-  if ( read(m_i2c_fd,
-	     (void *) value,
-	     (size_t) 1) != 1 ) {
-
-    THROW_RXP(EPROM24x_LINUX_ERROR, EPROM24x_I2C_OPERATION_FAILED,
-	      "Random read failed to get data from addr(0x%x), device(%s)",
-	      addr, m_i2c_dev.c_str());
-  }
+  read_data(addr, (uint8_t *)value, sizeof(uint32_t));
 
   return EPROM24x_SUCCESS;
 }
@@ -208,7 +213,7 @@ long eprom24x_io::write_u8(uint32_t addr, uint8_t value)
   // Check that address is valid
   if ( addr > (m_eprom_size_in_bytes-1) ) {
     THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
-	      "Specified address(0x%x) too high, max address(0x%x)",
+	      "Specified address(0x%x) too high, max address(0x%x) for 8 bits",
 	      addr, m_eprom_size_in_bytes-1);
   }
 
@@ -253,4 +258,44 @@ long eprom24x_io::write_u8(uint32_t addr, uint8_t value)
 void eprom24x_io::init_members(void)
 {
   m_i2c_fd = 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void eprom24x_io::read_data(uint32_t addr, uint8_t *data, uint16_t len)
+{
+  struct i2c_rdwr_ioctl_data rdwr_msg;
+  struct i2c_msg i2c_msg_list[2];
+
+  rdwr_msg.msgs  = i2c_msg_list;
+  rdwr_msg.nmsgs = 2;
+
+  // High address byte shall be sent first
+  uint8_t the_addr[2];
+
+  if (m_nr_address_bytes == 1) {
+    the_addr[0] = LOW_BYTE(addr);
+  } else {
+    the_addr[0] = HIGH_BYTE(addr);
+    the_addr[1] = LOW_BYTE(addr);
+  }
+
+  // Step 1 : Set address  
+  i2c_msg_list[0].addr  = m_i2c_address;
+  i2c_msg_list[0].flags = 0;        // Write operation
+  i2c_msg_list[0].len   = m_nr_address_bytes;
+  i2c_msg_list[0].buf   = the_addr;
+
+  // Step 2 : Read data from address
+  i2c_msg_list[1].addr  = m_i2c_address;
+  i2c_msg_list[1].flags = I2C_M_RD; // Read operation
+  i2c_msg_list[1].len   = len;
+  i2c_msg_list[1].buf   = data;
+
+  // Start I2C transaction sequence, wait for result
+  if ( ioctl(m_i2c_fd, I2C_RDWR, &rdwr_msg) < 0 ) {
+    THROW_RXP(EPROM24x_LINUX_ERROR, EPROM24x_I2C_OPERATION_FAILED,
+	      "Sequential read failed to get bytes(%d) from addr(0x%x), device(%s)",
+	      len, addr, m_i2c_dev.c_str());
+  }
 }

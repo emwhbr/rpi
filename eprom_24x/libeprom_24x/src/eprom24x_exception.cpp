@@ -148,7 +148,7 @@ const char* eprom24x_exception::what() const throw()
   unsigned i=0;
   char buffer[18];
   while ( m_stack_frames[i] ) {
-    sprintf(buffer, "0x%016x", (uint32_t)m_stack_frames[i]);
+    sprintf(buffer, "0x%08x", (uint32_t)m_stack_frames[i]);
     oss_msg << "frame:" << dec << setw(2) << setfill('0') << i++
 	    << "  addr:" << buffer << "\n";
   }

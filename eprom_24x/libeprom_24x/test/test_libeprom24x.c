@@ -46,6 +46,8 @@ static void get_last_error(void);
 static void initialize(void);
 static void finalize(void);
 static void read_u8(void);
+static void read_u16(void);
+static void read_u32(void);
 static void write_u8(void);
 static void do_test_libeprom24x(void);
 
@@ -100,8 +102,8 @@ static void get_last_error(void)
 static void initialize(void)
 {
   EPROM24x_DEVICE eprom_device = EPROM24x_64Kbit;
-  uint8_t i2c_address = 0x50;   // JOE: Check address
-  char *i2c_dev = "/dev/i2c-0"; // JOE: Check device file
+  uint8_t i2c_address = 0x50;   /* A0:A1:A2 =0 */
+  char *i2c_dev = "/dev/i2c-1"; /* Raspberry Pi (Model B, GPIO P1) */
 
   if (eprom24x_initialize(eprom_device,
 			  i2c_address,
@@ -136,7 +138,43 @@ static void read_u8(void)
     return;
   }
 
-  printf("0x%08x : 0x%02x\n", addr, value);
+  printf("0x%05x : 0x%02x\n", addr, value);
+}
+
+/*****************************************************************/
+
+static void read_u16(void)
+{
+  uint32_t addr;
+  uint16_t value;
+
+  printf("Enter EPROM address(hex): 0x");
+  scanf("%x", &addr);
+
+  if (eprom24x_read_u16(addr, &value) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+
+  printf("0x%05x : 0x%04x\n", addr, value);
+}
+
+/*****************************************************************/
+
+static void read_u32(void)
+{
+  uint32_t addr;
+  uint32_t value;
+
+  printf("Enter EPROM address(hex): 0x");
+  scanf("%x", &addr);
+
+  if (eprom24x_read_u32(addr, &value) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+
+  printf("0x%05x : 0x%08x\n", addr, value);
 }
 
 /*****************************************************************/
@@ -167,8 +205,10 @@ static void print_menu(void)
   printf("  2. get last error + get error string\n");
   printf("  3. initialize\n");
   printf("  4. finalize\n");
-  printf("  5. read 8 bit\n");
-  printf("  6. write 8 bit\n");
+  printf("  5. read u8\n");
+  printf("  6. read u16\n");
+  printf("  7. read u32\n");
+  printf("  8. write u8\n");
   printf("100. Exit\n\n");
 }
 
@@ -201,6 +241,12 @@ static void do_test_libeprom24x(void)
       read_u8();
       break;
     case 6:
+      read_u16();
+      break;
+    case 7:
+      read_u32();
+      break;
+    case 8:
       write_u8();
       break;
     case 100: /* Exit */
