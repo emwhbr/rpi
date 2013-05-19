@@ -31,7 +31,8 @@ extern "C" {
 #define EPROM24x_FILE_OPERATION_FAILED         4
 #define EPROM24x_I2C_OPERATION_FAILED          5
 #define EPROM24x_EPROM_NOT_SUPPORTED           6
-#define EPROM24x_UNEXPECTED_EXCEPTION          7
+#define EPROM24x_EPROM_NOT_RESPONDING          7
+#define EPROM24x_UNEXPECTED_EXCEPTION          8
 
 /*
  * Error source values

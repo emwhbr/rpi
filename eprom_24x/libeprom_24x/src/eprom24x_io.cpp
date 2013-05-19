@@ -15,6 +15,9 @@
 #include "eprom24x_io.h"
 #include "eprom24x_exception.h"
 
+// Implementation notes:
+// https://www.kernel.org/doc/Documentation/i2c/dev-interface
+
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of macros
 /////////////////////////////////////////////////////////////////////////////
@@ -138,6 +141,23 @@ void eprom24x_io::initialize(void)
 	      "Failed to set slave addr(0x%x), device(%s)",
 	      m_i2c_address, m_i2c_dev.c_str());
   }
+
+  // Set I2C timeout (in units of 10 ms)
+  if ( ioctl(m_i2c_fd, I2C_TIMEOUT, 20) < 0 ) { // 200 ms
+
+    close(m_i2c_fd);
+
+    THROW_RXP(EPROM24x_LINUX_ERROR, EPROM24x_I2C_OPERATION_FAILED,
+	      "Failed to set timeout, device(%s)",
+	      m_i2c_address, m_i2c_dev.c_str());
+  }
+
+  // Check if EPROM is present
+  if ( !eprom_ready() ) {
+    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_EPROM_NOT_RESPONDING,
+	      "Failed to probe addr(0x%x), device(%s)",
+	      m_i2c_address, m_i2c_dev.c_str());
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -238,13 +258,7 @@ long eprom24x_io::write_u8(uint32_t addr, uint8_t value)
   }
 
   // Step 2 : Wait for completition
-  //          Acknowledge polling, see datasheet, JOE!
-  
-
-  // JOE: Hint for performing complex transfers
-  //      ioctl(file, I2C_RDWR, struct i2c_rdwr_ioctl_data *msgset)
-  //      linux/i2c-dev.h && linux/i2c.h
-  //      See example: http://bunniestudios.com/blog/images/infocast_i2c.c
+  // JOE: Use function 'eprom_ready' and some kind of timeout
 
   return EPROM24x_SUCCESS;
 }
@@ -297,5 +311,34 @@ void eprom24x_io::read_data(uint32_t addr, uint8_t *data, uint16_t len)
     THROW_RXP(EPROM24x_LINUX_ERROR, EPROM24x_I2C_OPERATION_FAILED,
 	      "Sequential read failed to get bytes(%d) from addr(0x%x), device(%s)",
 	      len, addr, m_i2c_dev.c_str());
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+bool eprom24x_io::eprom_ready(void)
+{
+  // During a write cycle, the EEPROM is not accessible, and will therefore 
+  // not ACK any requests. This feature can be used to determine when the
+  // write is actually completed, and is denoted acknowledgement polling.
+
+  struct i2c_rdwr_ioctl_data rdwr_msg;
+  struct i2c_msg i2c_msg_list[1];
+
+  rdwr_msg.msgs  = i2c_msg_list;
+  rdwr_msg.nmsgs = 1;
+
+  // Step 1 : Set address  
+  i2c_msg_list[0].addr  = m_i2c_address;
+  i2c_msg_list[0].flags = 0;        // Write operation
+  i2c_msg_list[0].len   = 0;
+  i2c_msg_list[0].buf   = NULL;
+
+  // Start I2C transaction sequence, wait for result
+  if ( ioctl(m_i2c_fd, I2C_RDWR, &rdwr_msg) < 0 ) {
+    return false;
+  }
+  else {
+    return true; // Transaction OK, EPROM is ready
   }
 }

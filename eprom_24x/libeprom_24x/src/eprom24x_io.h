@@ -43,8 +43,8 @@ private:
   int      m_i2c_fd;
 
   void init_members(void);
-
   void read_data(uint32_t addr, uint8_t *data, uint16_t len);
+  bool eprom_ready(void);
 };
 
 #endif // __EPROM24x_IO_H__

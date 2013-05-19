@@ -450,6 +450,9 @@ long eprom24x_core::internal_get_error_string(long error_code,
   case EPROM24x_EPROM_NOT_SUPPORTED:
     strncpy(error_string, "EPROM not supported", str_len);
     break;
+  case EPROM24x_EPROM_NOT_RESPONDING:
+    strncpy(error_string, "EPROM not responding", str_len);
+    break;
   case EPROM24x_UNEXPECTED_EXCEPTION:
     strncpy(error_string, "Unexpected exception", str_len);
     break;
