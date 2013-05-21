@@ -1,0 +1,4 @@
+BACH - BAsic CHar module
+
+An example of howto create a simple kernel char driver
+with a matching user space application.
