@@ -1,8 +1,13 @@
-/*************************************************************
-*                                                            *
-* Copyright (C) Bonden i Nol                                 *
-*                                                            *
-**************************************************************/
+// ************************************************************************
+// *                                                                      *
+// * Copyright (C) 2013 Bonden i Nol (hakanbrolin@hotmail.com)            *
+// *                                                                      *
+// * This program is free software; you can redistribute it and/or modify *
+// * it under the terms of the GNU General Public License as published by *
+// * the Free Software Foundation; either version 2 of the License, or    *
+// * (at your option) any later version.                                  *
+// *                                                                      *
+// ************************************************************************
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -441,6 +446,9 @@ long eprom24x_core::internal_get_error_string(long error_code,
   case EPROM24x_BAD_ARGUMENT:
     strncpy(error_string, "Bad argument", str_len);
     break;
+  case EPROM24x_OPERATION_NOT_ALLOWED:
+    strncpy(error_string, "Operation not allowed", str_len);
+    break; 
   case EPROM24x_FILE_OPERATION_FAILED:
     strncpy(error_string, "File operation failed", str_len);
     break;
@@ -452,6 +460,9 @@ long eprom24x_core::internal_get_error_string(long error_code,
     break;
   case EPROM24x_EPROM_NOT_RESPONDING:
     strncpy(error_string, "EPROM not responding", str_len);
+    break;  
+  case EPROM24x_CLOCK_OPERATION_FAILED:
+    strncpy(error_string, "Clock operation failed", str_len);
     break;
   case EPROM24x_UNEXPECTED_EXCEPTION:
     strncpy(error_string, "Unexpected exception", str_len);

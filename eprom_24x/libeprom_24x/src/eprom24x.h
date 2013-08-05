@@ -1,8 +1,13 @@
-/*************************************************************
-*                                                            *
-* Copyright (C) Bonden i Nol                                 *
-*                                                            *
-**************************************************************/
+/************************************************************************
+ *                                                                      *
+ * Copyright (C) 2013 Bonden i Nol (hakanbrolin@hotmail.com)            *
+ *                                                                      *
+ * This program is free software; you can redistribute it and/or modify *
+ * it under the terms of the GNU General Public License as published by *
+ * the Free Software Foundation; either version 2 of the License, or    *
+ * (at your option) any later version.                                  *
+ *                                                                      *
+ ************************************************************************/
 
 #ifndef __EPROM24x_H__
 #define __EPROM24x_H__
@@ -28,11 +33,13 @@ extern "C" {
 #define EPROM24x_NOT_INITIALIZED               1
 #define EPROM24x_ALREADY_INITIALIZED           2
 #define EPROM24x_BAD_ARGUMENT                  3
-#define EPROM24x_FILE_OPERATION_FAILED         4
-#define EPROM24x_I2C_OPERATION_FAILED          5
-#define EPROM24x_EPROM_NOT_SUPPORTED           6
-#define EPROM24x_EPROM_NOT_RESPONDING          7
-#define EPROM24x_UNEXPECTED_EXCEPTION          8
+#define EPROM24x_OPERATION_NOT_ALLOWED         4
+#define EPROM24x_FILE_OPERATION_FAILED         5
+#define EPROM24x_I2C_OPERATION_FAILED          6
+#define EPROM24x_EPROM_NOT_SUPPORTED           7
+#define EPROM24x_EPROM_NOT_RESPONDING          8
+#define EPROM24x_CLOCK_OPERATION_FAILED        9
+#define EPROM24x_UNEXPECTED_EXCEPTION          10
 
 /*
  * Error source values
@@ -43,7 +50,6 @@ typedef enum {EPROM24x_INTERNAL_ERROR,
 /*
  * Basic API support types
  */
-
 
 /*
  * API types

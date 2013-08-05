@@ -9,12 +9,10 @@
 // *                                                                      *
 // ************************************************************************
 
-#ifndef __EPROM24x_IO_H__
-#define __EPROM24x_IO_H__
+#ifndef __EPROM24x_TIMER_H__
+#define __EPROM24x_TIMER_H__
 
-#include <string>
-
-#include "eprom24x.h"
+#include <time.h>
 
 using namespace std;
 
@@ -22,35 +20,29 @@ using namespace std;
 //               Definition of classes
 /////////////////////////////////////////////////////////////////////////////
 
-class eprom24x_io {
+class eprom24x_timer {
 
-public:
-  eprom24x_io(EPROM24x_DEVICE eprom_device,
-	      uint8_t i2c_address,
-	      const char *i2c_dev);
-  ~eprom24x_io(void);
+ public:
+  eprom24x_timer(void);
+  ~eprom24x_timer(void);
+  
+  void reset(void);
+  void pause(void);
+  void resume(void);
 
-  void initialize(void);
-  void finalize(void);
+  double get_elapsed_time(void); // Total time (paused + running)
+  double get_running_time(void); // Only time when NOT paused
 
-  long read_u8(uint32_t addr, uint8_t *value);
-  long read_u16(uint32_t addr, uint16_t *value);
-  long read_u32(uint32_t addr, uint32_t *value);
+  bool is_running(void);
 
-  long write_u8(uint32_t addr, uint8_t value);
+ private:
+  bool	  m_timer_running;
+  double  m_running_time;
 
-private:
-  bool     m_eprom_supported;
-  uint8_t  m_nr_address_bytes;
-  uint32_t m_eprom_size_in_bytes;
-  double   m_page_write_time;
-  uint8_t  m_i2c_address;
-  string   m_i2c_dev;
-  int      m_i2c_fd;
+  struct timespec m_start_time;
+  struct timespec m_last_start_time;
 
-  void init_members(void);
-  void read_data(uint32_t addr, uint8_t *data, uint16_t len);
-  bool eprom_ready(void);
+  double get_time_diff(timespec start, timespec end);
 };
 
-#endif // __EPROM24x_IO_H__
+#endif // __EPROM24x_TIMER_H__

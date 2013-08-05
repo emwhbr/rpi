@@ -9,48 +9,23 @@
 // *                                                                      *
 // ************************************************************************
 
-#ifndef __EPROM24x_IO_H__
-#define __EPROM24x_IO_H__
+#ifndef __EPROM24x_DELAY_H__
+#define __EPROM24x_DELAY_H__
 
-#include <string>
-
-#include "eprom24x.h"
-
-using namespace std;
+#include <time.h>
 
 /////////////////////////////////////////////////////////////////////////////
-//               Definition of classes
+//               Definition of exported functions
 /////////////////////////////////////////////////////////////////////////////
 
-class eprom24x_io {
+extern clockid_t get_clock_id(void);
 
-public:
-  eprom24x_io(EPROM24x_DEVICE eprom_device,
-	      uint8_t i2c_address,
-	      const char *i2c_dev);
-  ~eprom24x_io(void);
+extern void get_new_time(const struct timespec *old_time,
+			 double diff_in_sec,
+			 struct timespec *new_time);
 
-  void initialize(void);
-  void finalize(void);
+extern void delay(double time_in_sec);
 
-  long read_u8(uint32_t addr, uint8_t *value);
-  long read_u16(uint32_t addr, uint16_t *value);
-  long read_u32(uint32_t addr, uint32_t *value);
+extern void delay_until(const struct timespec *the_time);
 
-  long write_u8(uint32_t addr, uint8_t value);
-
-private:
-  bool     m_eprom_supported;
-  uint8_t  m_nr_address_bytes;
-  uint32_t m_eprom_size_in_bytes;
-  double   m_page_write_time;
-  uint8_t  m_i2c_address;
-  string   m_i2c_dev;
-  int      m_i2c_fd;
-
-  void init_members(void);
-  void read_data(uint32_t addr, uint8_t *data, uint16_t len);
-  bool eprom_ready(void);
-};
-
-#endif // __EPROM24x_IO_H__
+#endif // __EPROM24x_DELAY_H__

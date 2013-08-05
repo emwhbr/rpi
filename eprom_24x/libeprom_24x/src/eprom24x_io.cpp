@@ -1,8 +1,13 @@
-/*************************************************************
-*                                                            *
-* Copyright (C) Bonden i Nol                                 *
-*                                                            *
-**************************************************************/
+// ************************************************************************
+// *                                                                      *
+// * Copyright (C) 2013 Bonden i Nol (hakanbrolin@hotmail.com)            *
+// *                                                                      *
+// * This program is free software; you can redistribute it and/or modify *
+// * it under the terms of the GNU General Public License as published by *
+// * the Free Software Foundation; either version 2 of the License, or    *
+// * (at your option) any later version.                                  *
+// *                                                                      *
+// ************************************************************************
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -13,6 +18,8 @@
 #include <unistd.h>
 
 #include "eprom24x_io.h"
+#include "eprom24x_timer.h"
+#include "eprom24x_delay.h"
 #include "eprom24x_exception.h"
 
 // Implementation notes:
@@ -41,61 +48,73 @@ eprom24x_io::eprom24x_io(EPROM24x_DEVICE eprom_device,
   case EPROM24x_128bit:
     m_eprom_size_in_bytes = 16;     // Data:16 B, Address bytes:1
     m_nr_address_bytes    = 1;
+    m_page_write_time     = 0.004;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_1Kbit:
     m_eprom_size_in_bytes = 128;    // Data:128 B, Address bytes:1
     m_nr_address_bytes    = 1;
+    m_page_write_time     = 0.010;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_2Kbit:
     m_eprom_size_in_bytes = 256;    // Data:256 B, Address bytes:1
     m_nr_address_bytes    = 1;
+    m_page_write_time     = 0.010;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_4Kbit:
     m_eprom_size_in_bytes = 512;    // Data:512 B, Address bytes:1
     m_nr_address_bytes    = 1;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = false;  // Block addressing not supported yet
     break;
   case EPROM24x_8Kbit:
     m_eprom_size_in_bytes = 1024;   // Data:1 KB, Address bytes:1
     m_nr_address_bytes    = 1;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = false;  // Block addressing not supported yet
     break;
   case EPROM24x_16Kbit:
     m_eprom_size_in_bytes = 2048;   // Data:2 KB, Address bytes:1
     m_nr_address_bytes    = 1;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = false;  // Block addressing not supported yet
     break;
   case EPROM24x_32Kbit:
     m_eprom_size_in_bytes = 4096;   // Data: 4 KB, Address bytes:2
     m_nr_address_bytes    = 2;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_64Kbit:
     m_eprom_size_in_bytes = 8192;   // Data:8 KB, Address bytes:2
     m_nr_address_bytes    = 2;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_128Kbit:
     m_eprom_size_in_bytes = 16384;  // Data:16 KB, Address bytes:2
     m_nr_address_bytes    = 2;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_256Kbit:
     m_eprom_size_in_bytes = 32768;  // Data:32 KB, Address bytes:2
     m_nr_address_bytes    = 2;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_512Kbit:
     m_eprom_size_in_bytes = 65536;  // Data:64 KB, Address bytes:2
     m_nr_address_bytes    = 2;
+    m_page_write_time     = 0.005;
     m_eprom_supported     = true;   // Single block addressing
     break;
   case EPROM24x_1Mbit:
     m_eprom_size_in_bytes = 131072; // Data:128 KB, Address bytes:2
     m_nr_address_bytes    = 2;
+    m_page_write_time     = 0.003;
     m_eprom_supported     = false;  // Block addressing not supported yet
     break;
   }
@@ -257,8 +276,24 @@ long eprom24x_io::write_u8(uint32_t addr, uint8_t value)
 	      addr, value, m_i2c_dev.c_str());
   }
 
-  // Step 2 : Wait for completition
-  // JOE: Use function 'eprom_ready' and some kind of timeout
+  // Step 2 : Wait for completition with device specific timeout
+  eprom24x_timer ack_poll_timer;
+  bool ack_poll_timeout = true;
+  ack_poll_timer.reset();
+  while ( ack_poll_timer.get_elapsed_time() < m_page_write_time ) {
+    if ( eprom_ready() ) {
+      ack_poll_timeout = false;
+      break;
+    }
+    delay(0.001); // EPROMs got page write time > 1 ms
+  }
+
+  // Step 3 : Check if operation timeout
+  if (ack_poll_timeout) {
+    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_I2C_OPERATION_FAILED,
+	      "Random write timeout for addr(0x%x) and data(0x%x), device(%s)",
+	      addr, value, m_i2c_dev.c_str());
+  }
 
   return EPROM24x_SUCCESS;
 }
