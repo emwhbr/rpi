@@ -10,7 +10,9 @@
  ************************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -29,6 +31,8 @@
  */
 #define TEST_LIBEPROM24x_ERROR_MSG "*** ERROR : test_libeprom24x\n"
 
+#define G_BUFFER_SIZE (128 * 1024 * 1024) /* Big enough for all variants of EPROMs */
+
 /*
  * ---------------------------------
  *       Types
@@ -40,6 +44,7 @@
  *       Global variables
  * ---------------------------------
  */
+uint8_t *g_buffer;
 
 /*
  * ---------------------------------
@@ -53,7 +58,11 @@ static void finalize(void);
 static void read_u8(void);
 static void read_u16(void);
 static void read_u32(void);
+static void read_to_buffer(void);
 static void write_u8(void);
+static void write_u16(void);
+static void write_u32(void);
+static void write_from_buffer(void);
 static void do_test_libeprom24x(void);
 
 
@@ -116,12 +125,18 @@ static void initialize(void)
     printf(TEST_LIBEPROM24x_ERROR_MSG);
     return;
   }
+
+  g_buffer = malloc(G_BUFFER_SIZE);
 }
 
 /*****************************************************************/
 
 static void finalize(void)
 {
+  if (g_buffer) {
+    free(g_buffer);
+  }
+
   if (eprom24x_finalize() != EPROM24x_SUCCESS) {
     printf(TEST_LIBEPROM24x_ERROR_MSG);
     return;
@@ -184,18 +199,119 @@ static void read_u32(void)
 
 /*****************************************************************/
 
+static void read_to_buffer(void)
+{
+  uint32_t addr;
+  unsigned words;
+  unsigned i, j;
+
+  printf("Enter EPROM address(hex): 0x");
+  scanf("%x", &addr);
+
+  printf("Enter number of 32-bit words(dec): ");
+  scanf("%d", &words);
+
+  /* Clear buffer */
+  bzero((void *)g_buffer, G_BUFFER_SIZE);
+
+  /* Read data to buffer from EPROM */
+  if (eprom24x_read(addr, (void *)g_buffer, words*4) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+
+  /* Print buffer as bytes */
+  uint8_t *word8 = (uint8_t *)g_buffer;
+  for (i=0; i < words; i++) {
+
+    printf("0x%08x : ", addr + i*4);
+
+    for (j=0; j < 4; j++) {
+      printf("0x%02x\t", word8[i*4 + j]);
+    }
+    printf("\n");
+  }
+}
+
+/*****************************************************************/
+
 static void write_u8(void)
 {
   uint32_t addr;
-  unsigned int value;
+  uint8_t value;
 
   printf("Enter EPROM address(hex): 0x");
   scanf("%x", &addr);
 
   printf("Enter data (8 bit) to write(hex): 0x");
-  scanf("%x", &value);
+  scanf("%x", (unsigned int *)&value);
 
-  if (eprom24x_write_u8(addr, (uint8_t)value) != EPROM24x_SUCCESS) {
+  if (eprom24x_write_u8(addr, value) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+}
+
+/*****************************************************************/
+
+static void write_u16(void)
+{
+  uint32_t addr;
+  uint16_t value;
+
+  printf("Enter EPROM address(hex): 0x");
+  scanf("%x", &addr);
+
+  printf("Enter data (16 bit) to write(hex): 0x");
+  scanf("%x", (unsigned int *)&value);
+
+  if (eprom24x_write_u16(addr, value) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+}
+
+/*****************************************************************/
+
+static void write_u32(void)
+{
+  uint32_t addr;
+  uint32_t value;
+
+  printf("Enter EPROM address(hex): 0x");
+  scanf("%x", &addr);
+
+  printf("Enter data (32 bit) to write(hex): 0x");
+  scanf("%x", (unsigned int *)&value);
+
+  if (eprom24x_write_u32(addr, value) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+}
+
+/*****************************************************************/
+
+static void write_from_buffer(void)
+{
+  uint32_t addr;
+  unsigned words;
+  unsigned i;
+
+  printf("Enter EPROM address(hex): 0x");
+  scanf("%x", &addr);
+
+  printf("Enter number of 32-bit words(dec): ");
+  scanf("%d", &words);
+
+  /* Prepare buffer */
+  uint32_t *word32 = (uint32_t *)g_buffer;
+  for (i=0; i < words; i++) {
+    word32[i] = 0;
+  }
+
+  /* Write from buffer to EPROM */
+  if (eprom24x_write(addr, (const void *)g_buffer, words*4) != EPROM24x_SUCCESS) {
     printf(TEST_LIBEPROM24x_ERROR_MSG);
     return;
   }
@@ -213,7 +329,11 @@ static void print_menu(void)
   printf("  5. read u8\n");
   printf("  6. read u16\n");
   printf("  7. read u32\n");
-  printf("  8. write u8\n");
+  printf("  8. read to buffer\n");
+  printf("  9. write u8\n");
+  printf(" 10. write u16\n");
+  printf(" 11. write u32\n");
+  printf(" 12. write from buffer\n");
   printf("100. Exit\n\n");
 }
 
@@ -252,7 +372,19 @@ static void do_test_libeprom24x(void)
       read_u32();
       break;
     case 8:
+      read_to_buffer();
+      break;
+    case 9:
       write_u8();
+      break;
+    case 10:
+      write_u16();
+      break;
+    case 11:
+      write_u32();
+      break;
+    case 12:
+      write_from_buffer();
       break;
     case 100: /* Exit */
       break;

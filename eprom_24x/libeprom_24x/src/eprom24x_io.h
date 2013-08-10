@@ -12,6 +12,7 @@
 #ifndef __EPROM24x_IO_H__
 #define __EPROM24x_IO_H__
 
+#include <pthread.h>
 #include <string>
 
 #include "eprom24x.h"
@@ -33,24 +34,35 @@ public:
   void initialize(void);
   void finalize(void);
 
-  long read_u8(uint32_t addr, uint8_t *value);
-  long read_u16(uint32_t addr, uint16_t *value);
-  long read_u32(uint32_t addr, uint32_t *value);
-
-  long write_u8(uint32_t addr, uint8_t value);
+  long read(uint32_t addr, void *data, uint16_t len);
+  long write(uint32_t addr, const void *data, uint16_t len);
 
 private:
-  bool     m_eprom_supported;
-  uint8_t  m_nr_address_bytes;
-  uint32_t m_eprom_size_in_bytes;
-  double   m_page_write_time;
-  uint8_t  m_i2c_address;
-  string   m_i2c_dev;
-  int      m_i2c_fd;
+  bool     	   m_eprom_supported;
+  uint8_t  	   m_nr_address_bytes;
+  uint32_t 	   m_eprom_size_in_bytes;
+  double   	   m_page_write_time;
+  uint32_t 	   m_page_size_in_bytes;
+  uint8_t  	   *m_page_write_buffer;
+  pthread_mutex_t  m_rw_mutex;
+  uint8_t  	   m_i2c_address;
+  string   	   m_i2c_dev;
+  int      	   m_i2c_fd;
 
   void init_members(void);
-  void read_data(uint32_t addr, uint8_t *data, uint16_t len);
+
+  void check_valid_address(uint32_t addr, uint16_t bytes_to_access);
+
+  void read_page_data(uint32_t addr, uint8_t *data, uint16_t len);
+
+  void write_page(uint32_t addr, const uint8_t *data, uint16_t len);
+  void write_page_data(uint32_t addr, const uint8_t *data, uint16_t len);
+  void write_byte(uint32_t addr, const uint8_t *data, uint16_t len);
+  void write_byte_data(uint32_t addr, const uint8_t *value);
+
   bool eprom_ready(void);
+  void wait_eprom_ready(double timeout_in_sec,
+			double poll_interval_in_sec);
 };
 
 #endif // __EPROM24x_IO_H__

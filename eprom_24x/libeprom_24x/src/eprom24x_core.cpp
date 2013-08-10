@@ -38,12 +38,11 @@
     } })
 
 #ifdef DEBUG_PRINTS
-/* 
- * Notes!
- * Macro 'debug_printf' can be used anywhere in LIBEPROM24x.
- * The other macros can only be used in function 'update_error'.
- * 
-*/
+//
+// Notes!
+// Macro 'debug_printf' can be used anywhere in LIBEPROM24x.
+// The other macros can only be used in function 'update_error'.
+//
 #define debug_printf(fmt, args...)  printf("LIBEPROM24x - "); \
                                     printf(fmt, ##args); \
 				    fflush(stdout)
@@ -58,23 +57,14 @@
 #define debug_printf(fmt, args...) 
 #define debug_linux_error()
 #define debug_internal_error()
-#endif /* DEBUG_PRINTS */
+#endif // DEBUG_PRINTS
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
 /////////////////////////////////////////////////////////////////////////////
 
-/****************************************************************************
-*
-* Name eprom24x_core
-*
-* Description Class constructor.
-*
-* Parameters None
-*
-* Error handling None
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 eprom24x_core::eprom24x_core(void)
 {
   m_error_source    = EPROM24x_INTERNAL_ERROR;
@@ -86,17 +76,8 @@ eprom24x_core::eprom24x_core(void)
   pthread_mutex_init(&m_init_mutex, NULL); // Use default mutex attributes
 }
 
-/****************************************************************************
-*
-* Name ~eprom24x_core
-*
-* Description Class destructor.
-*
-* Parameters None
-*
-* Error handling None
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 eprom24x_core::~eprom24x_core(void)
 {
   pthread_mutex_destroy(&m_error_mutex);
@@ -112,7 +93,7 @@ long eprom24x_core::get_last_error(EPROM24x_STATUS *status)
     status->error_source = m_error_source;
     status->error_code   = m_error_code;
     
-    /* Clear internal error information */
+    // Clear internal error information
     m_error_source    = EPROM24x_INTERNAL_ERROR;
     m_error_code      = EPROM24x_NO_ERROR;
     m_last_error_read = true;
@@ -228,7 +209,7 @@ long eprom24x_core::read_u8(uint32_t addr, uint8_t *value)
     }
     
     // Do the actual work
-    return m_eprom24x_io_auto->read_u8(addr, value);
+    return m_eprom24x_io_auto->read(addr, (void *)value, sizeof(uint8_t));
   }
   catch (eprom24x_exception &rxp) {
     return set_error(rxp);
@@ -256,7 +237,7 @@ long eprom24x_core::read_u16(uint32_t addr, uint16_t *value)
     }
     
     // Do the actual work
-    return m_eprom24x_io_auto->read_u16(addr, value);
+    return m_eprom24x_io_auto->read(addr, (void *)value, sizeof(uint16_t));
   }
   catch (eprom24x_exception &rxp) {
     return set_error(rxp);
@@ -284,7 +265,35 @@ long eprom24x_core::read_u32(uint32_t addr, uint32_t *value)
     }
     
     // Do the actual work
-    return m_eprom24x_io_auto->read_u32(addr, value);
+    return m_eprom24x_io_auto->read(addr, (void *)value, sizeof(uint32_t));
+  }
+  catch (eprom24x_exception &rxp) {
+    return set_error(rxp);
+  }
+  catch (...) {
+    return set_error(RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_core::read(uint32_t addr, void *data, uint16_t len)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Check input values
+    if (!data) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
+		"data is null pointer");
+    }
+    
+    // Do the actual work
+    return m_eprom24x_io_auto->read(addr, data, len);
   }
   catch (eprom24x_exception &rxp) {
     return set_error(rxp);
@@ -306,7 +315,79 @@ long eprom24x_core::write_u8(uint32_t addr, uint8_t value)
     }
 
     // Do the actual work
-    return m_eprom24x_io_auto->write_u8(addr, value);
+    return m_eprom24x_io_auto->write(addr, (const void*)&value, sizeof(uint8_t));
+  }
+  catch (eprom24x_exception &rxp) {
+    return set_error(rxp);
+  }
+  catch (...) {
+    return set_error(RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_core::write_u16(uint32_t addr, uint16_t value)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Do the actual work
+    return m_eprom24x_io_auto->write(addr, (const void *)&value, sizeof(uint16_t));
+  }
+  catch (eprom24x_exception &rxp) {
+    return set_error(rxp);
+  }
+  catch (...) {
+    return set_error(RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_core::write_u32(uint32_t addr, uint32_t value)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Do the actual work
+    return m_eprom24x_io_auto->write(addr, (const void*)&value, sizeof(uint32_t));
+  }
+  catch (eprom24x_exception &rxp) {
+    return set_error(rxp);
+  }
+  catch (...) {
+    return set_error(RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_core::write(uint32_t addr, const void *data, uint16_t len)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Check input values
+    if (!data) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
+		"data is null pointer");
+    }
+
+    // Do the actual work
+    return m_eprom24x_io_auto->write(addr, data, len);
   }
   catch (eprom24x_exception &rxp) {
     return set_error(rxp);
@@ -333,17 +414,8 @@ long eprom24x_core::test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod_info)
 //               Private member functions
 /////////////////////////////////////////////////////////////////////////////
 
-/****************************************************************************
-*
-* Name set_error
-*
-* Description Coverts and exception and updates internal error information.
-*
-* Parameters rxp  IN  The exception
-*
-* Error handling Returns EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 long eprom24x_core::set_error(eprom24x_exception rxp)
 {
 #ifdef DEBUG_PRINTS
@@ -381,24 +453,15 @@ long eprom24x_core::set_error(eprom24x_exception rxp)
   return update_error(rxp);
 }
 
-/****************************************************************************
-*
-* Name update_error
-*
-* Description Updates internal error information.
-*
-* Parameters rxp  IN  The exception
-*
-* Error handling Returns EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 long eprom24x_core::update_error(eprom24x_exception rxp)
 {
   MUTEX_LOCK(m_error_mutex);
   if (m_last_error_read) {
     m_error_source    = rxp.get_source();
     m_error_code      = rxp.get_code();
-    m_last_error_read = false; /* Latch last error until read */
+    m_last_error_read = false; // Latch last error until read
   }
   MUTEX_UNLOCK(m_error_mutex);
 
@@ -416,18 +479,8 @@ long eprom24x_core::update_error(eprom24x_exception rxp)
   return EPROM24x_FAILURE;
 }
 
-/****************************************************************************
-*
-* Name internal_get_error_string
-*
-* Description TBD
-*
-* Parameters TBD
-*
-* Error handling Returns EPROM24x_SUCCESS if successful
-*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 long eprom24x_core::internal_get_error_string(long error_code,
 					      EPROM24x_ERROR_STRING error_string)
 {
@@ -474,18 +527,8 @@ long eprom24x_core::internal_get_error_string(long error_code,
   return EPROM24x_SUCCESS;
 }
 
-/****************************************************************************
-*
-* Name internal_test_get_lib_prod_info
-*
-* Description TBD
-*
-* Parameters TBD
-*
-* Error handling Returns EPROM24x_SUCCESS if successful
-*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 long eprom24x_core::internal_test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod_info)
 {
   long rc = EPROM24x_SUCCESS;
@@ -501,17 +544,8 @@ long eprom24x_core::internal_test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod
   return rc;
 }
 
-/****************************************************************************
-*
-* Name internal_initialize
-*
-* Description TBD
-*
-* Parameters TBD
-*
-* Error handling If unsuccessful throws exception.
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 void eprom24x_core::internal_initialize(EPROM24x_DEVICE eprom_device,
 					uint8_t i2c_address,
 					const char *i2c_dev)
@@ -524,17 +558,8 @@ void eprom24x_core::internal_initialize(EPROM24x_DEVICE eprom_device,
   m_eprom24x_io_auto->initialize();
 }
 
-/****************************************************************************
-*
-* Name internal_finalize
-*
-* Description TBD
-*
-* Parameters TBD
-*
-* Error handling If unsuccessful throws exception.
-*
-****************************************************************************/
+/////////////////////////////////////////////////////////////////////////////
+
 void eprom24x_core::internal_finalize(void)
 {
   // Finalize the i/o object

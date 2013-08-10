@@ -117,7 +117,9 @@ extern long eprom24x_get_error_string(long error_code,
 *
 * Name eprom24x_initialize
 *
-* Description TBD (Add more info later)
+* Description Allocates system resources and performs operations that are
+*             necessary to be able to communicate with the EPROM.
+*             Must be called before accessing the EPROM.
 *
 * Parameters eprom_device IN  Identifies the eprom.
 *            i2c_address  IN  I2C address of eprom.
@@ -135,7 +137,7 @@ extern long eprom24x_initialize(EPROM24x_DEVICE eprom_device,
 *
 * Name eprom24x_finalize
 *
-* Description TBD
+* Description Releases any resources that were claimed during initialization.
 *
 * Parameters None 
 *
@@ -192,6 +194,22 @@ extern long eprom24x_read_u32(uint32_t addr, uint32_t *value);
 
 /****************************************************************************
 *
+* Name eprom24x_read
+*
+* Description Reads data from EPROM.
+*
+* Parameters addr   IN   Address to read from.
+*            *data  OUT  Pointer to a buffer to hold data read from EPROM.
+*            len    IN   Number of bytes to read from EPROM.
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_read(uint32_t addr, void *data, uint16_t len);
+
+/****************************************************************************
+*
 * Name eprom24x_write_u8
 *
 * Description Writes 8 bits to EPROM.
@@ -204,6 +222,52 @@ extern long eprom24x_read_u32(uint32_t addr, uint32_t *value);
 *
 ****************************************************************************/
 extern long eprom24x_write_u8(uint32_t addr, uint8_t value);
+
+/****************************************************************************
+*
+* Name eprom24x_write_u16
+*
+* Description Writes 16 bits to EPROM.
+*
+* Parameters addr   IN  Address to write to.
+*            value  IN  Value to be written to EPROM.
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_write_u16(uint32_t addr, uint16_t value);
+
+/****************************************************************************
+*
+* Name eprom24x_write_u32
+*
+* Description Writes 32 bits to EPROM.
+*
+* Parameters addr   IN  Address to write to.
+*            value  IN  Value to be written to EPROM.
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_write_u32(uint32_t addr, uint32_t value);
+
+/****************************************************************************
+*
+* Name eprom24x_write
+*
+* Description Writes data to EPROM.
+*
+* Parameters addr   IN  Address to write to.
+*            *data  IN  Pointer to a buffer to be written to EPROM.
+*            len    IN  Number of bytes to write to EPROM.
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_write(uint32_t addr, const void *data, uint16_t len);
 
 /****************************************************************************
 *

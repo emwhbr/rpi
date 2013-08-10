@@ -45,8 +45,12 @@ public:
   long read_u8(uint32_t addr, uint8_t *value);
   long read_u16(uint32_t addr, uint16_t *value);
   long read_u32(uint32_t addr, uint32_t *value);
+  long read(uint32_t addr, void *data, uint16_t len);
 
   long write_u8(uint32_t addr, uint8_t value);
+  long write_u16(uint32_t addr, uint16_t value);  
+  long write_u32(uint32_t addr, uint32_t value);
+  long write(uint32_t addr, const void *data, uint16_t len);
 
   long test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod_info);
 
