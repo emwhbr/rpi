@@ -63,6 +63,7 @@ static void write_u8(void);
 static void write_u16(void);
 static void write_u32(void);
 static void write_from_buffer(void);
+static void erase_chip(void);
 static void do_test_libeprom24x(void);
 
 
@@ -223,9 +224,7 @@ static void read_to_buffer(void)
   /* Print buffer as bytes */
   uint8_t *word8 = (uint8_t *)g_buffer;
   for (i=0; i < words; i++) {
-
-    printf("0x%08x : ", addr + i*4);
-
+    printf("0x%05x : ", addr + i*4);
     for (j=0; j < 4; j++) {
       printf("0x%02x\t", word8[i*4 + j]);
     }
@@ -238,15 +237,15 @@ static void read_to_buffer(void)
 static void write_u8(void)
 {
   uint32_t addr;
-  uint8_t value;
+  unsigned value;
 
   printf("Enter EPROM address(hex): 0x");
   scanf("%x", &addr);
 
   printf("Enter data (8 bit) to write(hex): 0x");
-  scanf("%x", (unsigned int *)&value);
+  scanf("%x", &value);
 
-  if (eprom24x_write_u8(addr, value) != EPROM24x_SUCCESS) {
+  if (eprom24x_write_u8(addr, (uint8_t)value) != EPROM24x_SUCCESS) {
     printf(TEST_LIBEPROM24x_ERROR_MSG);
     return;
   }
@@ -257,15 +256,15 @@ static void write_u8(void)
 static void write_u16(void)
 {
   uint32_t addr;
-  uint16_t value;
+  unsigned value;
 
   printf("Enter EPROM address(hex): 0x");
   scanf("%x", &addr);
 
   printf("Enter data (16 bit) to write(hex): 0x");
-  scanf("%x", (unsigned int *)&value);
+  scanf("%x", &value);
 
-  if (eprom24x_write_u16(addr, value) != EPROM24x_SUCCESS) {
+  if (eprom24x_write_u16(addr, (uint16_t)value) != EPROM24x_SUCCESS) {
     printf(TEST_LIBEPROM24x_ERROR_MSG);
     return;
   }
@@ -307,11 +306,22 @@ static void write_from_buffer(void)
   /* Prepare buffer */
   uint32_t *word32 = (uint32_t *)g_buffer;
   for (i=0; i < words; i++) {
-    word32[i] = 0;
+    word32[i] = i;
   }
 
   /* Write from buffer to EPROM */
   if (eprom24x_write(addr, (const void *)g_buffer, words*4) != EPROM24x_SUCCESS) {
+    printf(TEST_LIBEPROM24x_ERROR_MSG);
+    return;
+  }
+}
+
+/*****************************************************************/
+
+static void erase_chip(void)
+{
+  /* Erase EPROM */
+  if (eprom24x_erase() != EPROM24x_SUCCESS) {
     printf(TEST_LIBEPROM24x_ERROR_MSG);
     return;
   }
@@ -334,6 +344,7 @@ static void print_menu(void)
   printf(" 10. write u16\n");
   printf(" 11. write u32\n");
   printf(" 12. write from buffer\n");
+  printf(" 13. erase chip\n");
   printf("100. Exit\n\n");
 }
 
@@ -385,6 +396,9 @@ static void do_test_libeprom24x(void)
       break;
     case 12:
       write_from_buffer();
+      break;
+    case 13:
+      erase_chip();
       break;
     case 100: /* Exit */
       break;

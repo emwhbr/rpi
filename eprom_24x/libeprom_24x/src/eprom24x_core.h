@@ -52,6 +52,8 @@ public:
   long write_u32(uint32_t addr, uint32_t value);
   long write(uint32_t addr, const void *data, uint16_t len);
 
+  long erase(void);
+
   long test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod_info);
 
 private:

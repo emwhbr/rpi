@@ -112,6 +112,13 @@ long eprom24x_write(uint32_t addr, const void *data, uint16_t len)
 
 ////////////////////////////////////////////////////////////////
 
+long eprom24x_erase(void)
+{
+  return g_object.erase();
+}
+
+////////////////////////////////////////////////////////////////
+
 long eprom24x_test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod_info)
 {
   return g_object.test_get_lib_prod_info(prod_info);

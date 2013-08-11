@@ -399,6 +399,28 @@ long eprom24x_core::write(uint32_t addr, const void *data, uint16_t len)
 
 /////////////////////////////////////////////////////////////////////////////
 
+long eprom24x_core::erase(void)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Do the actual work
+    return m_eprom24x_io_auto->erase();
+  }
+  catch (eprom24x_exception &rxp) {
+    return set_error(rxp);
+  }
+  catch (...) {
+    return set_error(RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
 long eprom24x_core::test_get_lib_prod_info(EPROM24x_LIB_PROD_INFO *prod_info)
 {
   try {
@@ -513,6 +535,9 @@ long eprom24x_core::internal_get_error_string(long error_code,
     break;
   case EPROM24x_EPROM_NOT_RESPONDING:
     strncpy(error_string, "EPROM not responding", str_len);
+    break;
+  case EPROM24x_EPROM_INVALID_ADDRESS:
+    strncpy(error_string, "EPROM invalid address", str_len);
     break;  
   case EPROM24x_CLOCK_OPERATION_FAILED:
     strncpy(error_string, "Clock operation failed", str_len);

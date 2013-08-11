@@ -37,6 +37,8 @@ public:
   long read(uint32_t addr, void *data, uint16_t len);
   long write(uint32_t addr, const void *data, uint16_t len);
 
+  long erase(void);
+
 private:
   bool     	   m_eprom_supported;
   uint8_t  	   m_nr_address_bytes;
@@ -44,6 +46,7 @@ private:
   double   	   m_page_write_time;
   uint32_t 	   m_page_size_in_bytes;
   uint8_t  	   *m_page_write_buffer;
+  uint8_t          *m_erase_buffer;
   pthread_mutex_t  m_rw_mutex;
   uint8_t  	   m_i2c_address;
   string   	   m_i2c_dev;
@@ -51,14 +54,17 @@ private:
 
   void init_members(void);
 
-  void check_valid_address(uint32_t addr, uint16_t bytes_to_access);
+  void check_valid_access(uint32_t addr, uint16_t bytes_to_access);
 
-  void read_page_data(uint32_t addr, uint8_t *data, uint16_t len);
+  void read_page(uint32_t addr, uint8_t *data, uint16_t len);
+  void read_data(uint32_t addr, uint8_t *data, uint16_t len);
 
   void write_page(uint32_t addr, const uint8_t *data, uint16_t len);
-  void write_page_data(uint32_t addr, const uint8_t *data, uint16_t len);
   void write_byte(uint32_t addr, const uint8_t *data, uint16_t len);
-  void write_byte_data(uint32_t addr, const uint8_t *value);
+  void write_data(uint32_t addr, const uint8_t *data, uint16_t len);
+
+  void erase_page(void);
+  void erase_byte(void);
 
   bool eprom_ready(void);
   void wait_eprom_ready(double timeout_in_sec,

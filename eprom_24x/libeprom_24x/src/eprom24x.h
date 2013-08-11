@@ -38,8 +38,9 @@ extern "C" {
 #define EPROM24x_I2C_OPERATION_FAILED          6
 #define EPROM24x_EPROM_NOT_SUPPORTED           7
 #define EPROM24x_EPROM_NOT_RESPONDING          8
-#define EPROM24x_CLOCK_OPERATION_FAILED        9
-#define EPROM24x_UNEXPECTED_EXCEPTION          10
+#define EPROM24x_EPROM_INVALID_ADDRESS         9
+#define EPROM24x_CLOCK_OPERATION_FAILED        10
+#define EPROM24x_UNEXPECTED_EXCEPTION          11
 
 /*
  * Error source values
@@ -268,6 +269,20 @@ extern long eprom24x_write_u32(uint32_t addr, uint32_t value);
 *
 ****************************************************************************/
 extern long eprom24x_write(uint32_t addr, const void *data, uint16_t len);
+
+/****************************************************************************
+*
+* Name eprom24x_erase
+*
+* Description Erase EPROM, fill all bytes with 0xFF.
+*
+* Parameters None
+*
+* Error handling Returns EPROM24x_SUCCESS if successful
+*                otherwise EPROM24x_FAILURE or EPROM24x_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long eprom24x_erase(void);
 
 /****************************************************************************
 *

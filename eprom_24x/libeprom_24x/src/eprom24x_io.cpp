@@ -9,8 +9,6 @@
 // *                                                                      *
 // ************************************************************************
 
-#include <stdio.h> // JOE : debug printouts
-
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -26,7 +24,16 @@
 #include "eprom24x_exception.h"
 
 // Implementation notes:
-// https://www.kernel.org/doc/Documentation/i2c/dev-interface
+// 1. General
+//    https://www.kernel.org/doc/Documentation/i2c/dev-interface
+//
+// 2. Hardcoded timeout constant in I2C kernel driver for raspberry PI
+//    See .../drivers/i2c/busses/i2c-bcm2708.c
+//    Timeout is hardcoded to 150 ms and will limit the number of bytes
+//    in a block transfer. With a 100 KHz I2C clock (T=10us), a transfer of
+//    one byte is around 90 us (8 data + 1 ack).
+//    150 ms ==> 150000 / 90 = 1667 Bytes
+//    We add a safety factor and only use 1000 Bytes in a block transfer,
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of macros
@@ -38,6 +45,9 @@
 #define HIGH_WORD(x)    ((uint16_t)(((x)>>16) & 0xFFFF))
 
 #define WRITE_POLL_INTERVAL  0.001  // EPROMs got page write time > 1 ms
+
+#define MAX_READ_SIZE  1000  // JOE: See implementation notes(2)
+                             // JOE: regarding hardcoded timeout constant in kernel
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
@@ -182,7 +192,9 @@ void eprom24x_io::initialize(void)
   }
 
   // Set I2C timeout (in units of 10 ms)
-  if ( ioctl(m_i2c_fd, I2C_TIMEOUT, 20) < 0 ) { // 200 ms
+  // JOE: This setting is useless, see implementation notes(2)
+  // JOE: regarding hardcoded timeout constant in kernel
+  if ( ioctl(m_i2c_fd, I2C_TIMEOUT, 20) < 0 ) {
 
     close(m_i2c_fd);
 
@@ -198,11 +210,19 @@ void eprom24x_io::initialize(void)
 	      m_i2c_address, m_i2c_dev.c_str());
   }
 
-  // Create page write buffer if page write is supported by chip
-  // This buffer will be used for page write with address and data
+  // Create 
+  // a) write buffer for address and data
+  // b) erase buffer with erase data
   if (m_page_size_in_bytes) {
     m_page_write_buffer = new uint8_t[m_nr_address_bytes + m_page_size_in_bytes];
+    m_erase_buffer      = new uint8_t[m_page_size_in_bytes];
+    memset((void *)m_erase_buffer, 0xff, m_page_size_in_bytes);
   }
+  else {
+    m_page_write_buffer = new uint8_t[m_nr_address_bytes + 1];
+    m_erase_buffer      = new uint8_t[1];
+    memset((void *)m_erase_buffer, 0xff, 1);
+  }  
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -211,8 +231,9 @@ void eprom24x_io::finalize(void)
 {
   int rc;
 
-  // Free any created page write buffer
+  // Free write/erase buffer
   delete [] m_page_write_buffer;
+  delete [] m_erase_buffer;
 
   // Close I2C device
   rc = close(m_i2c_fd);
@@ -233,10 +254,10 @@ long eprom24x_io::read(uint32_t addr, void *data, uint16_t len)
     pthread_mutex_lock(&m_rw_mutex);
 
     // Check that there is enough room for data on chip
-    check_valid_address(addr, len);
+    check_valid_access(addr, len);
     
-    // All chips support sequential read using pages
-    read_page_data(addr, (uint8_t *)data, len);
+    // All chips support sequential read using pages    
+    read_page(addr, (uint8_t *)data, len);
 
     pthread_mutex_unlock(&m_rw_mutex);
     
@@ -257,7 +278,7 @@ long eprom24x_io::write(uint32_t addr, const void *data, uint16_t len)
     pthread_mutex_lock(&m_rw_mutex);
 
     // Check that there is enough room for data on chip
-    check_valid_address(addr, len);
+    check_valid_access(addr, len);
     
     // Use page write if supported by chip
     if (m_page_size_in_bytes) {
@@ -265,6 +286,32 @@ long eprom24x_io::write(uint32_t addr, const void *data, uint16_t len)
     }
     else {
       write_byte(addr, (const uint8_t *)data, len);
+    }
+    
+    pthread_mutex_unlock(&m_rw_mutex);
+
+    return EPROM24x_SUCCESS;
+  }
+  catch (...) {
+    pthread_mutex_unlock(&m_rw_mutex);
+    throw;
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long eprom24x_io::erase(void)
+{
+   try {
+    // Lockdown the erase operation
+    pthread_mutex_lock(&m_rw_mutex);
+
+    // Use page write if supported by chip
+    if (m_page_size_in_bytes) {
+      erase_page();
+    }
+    else {
+      erase_byte();
     }
     
     pthread_mutex_unlock(&m_rw_mutex);
@@ -286,16 +333,24 @@ long eprom24x_io::write(uint32_t addr, const void *data, uint16_t len)
 void eprom24x_io::init_members(void)
 {
   m_page_write_buffer = NULL;
+  m_erase_buffer      = NULL;
   m_i2c_fd            = 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-void eprom24x_io::check_valid_address(uint32_t addr, uint16_t bytes_to_access)
+void eprom24x_io::check_valid_access(uint32_t addr, uint16_t bytes_to_access)
 {
+  // Check that chip is large enough
+  if (bytes_to_access > m_eprom_size_in_bytes) {
+    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
+	      "Requested size(%d) exceeds chip size(%d)",
+	      bytes_to_access, m_eprom_size_in_bytes);
+  }
+
   // Check that address is valid for specified access
   if ( addr > (m_eprom_size_in_bytes-bytes_to_access) ) {
-    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_BAD_ARGUMENT,
+    THROW_RXP(EPROM24x_INTERNAL_ERROR, EPROM24x_EPROM_INVALID_ADDRESS,
 	      "Address(0x%x) too high, max address(0x%x) for %d byte(s)",
 	      addr, m_eprom_size_in_bytes-bytes_to_access, bytes_to_access);
   }
@@ -303,7 +358,35 @@ void eprom24x_io::check_valid_address(uint32_t addr, uint16_t bytes_to_access)
 
 /////////////////////////////////////////////////////////////////////////////
 
-void eprom24x_io::read_page_data(uint32_t addr, uint8_t *data, uint16_t len)
+void eprom24x_io::read_page(uint32_t addr, uint8_t *data, uint16_t len)
+{
+  // JOE: See implementation notes(2)
+  // JOE: regarding hardcoded timeout constant in kernel
+  // JOE: This functions limits the number of bytes in a block transfer
+
+  uint32_t current_addr  = addr;
+  unsigned nr_block_read = len / MAX_READ_SIZE;
+  uint16_t rem_bytes     = len - (nr_block_read * MAX_READ_SIZE);
+
+  // Handle all full blocks in specified address range
+  for (unsigned block=0; block < nr_block_read; block++) {   
+
+    // Block read
+    read_data(current_addr, &data[block * MAX_READ_SIZE], MAX_READ_SIZE);
+
+    // Prepare next block read
+    current_addr += MAX_READ_SIZE;
+  }
+
+  // Handle any non-full blocks
+  if (rem_bytes) {
+    read_data(current_addr, &data[nr_block_read * MAX_READ_SIZE], rem_bytes);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void eprom24x_io::read_data(uint32_t addr, uint8_t *data, uint16_t len)
 {
   struct i2c_rdwr_ioctl_data rdwr_msg;
   struct i2c_msg i2c_msg_list[2];
@@ -366,11 +449,8 @@ void eprom24x_io::write_page(uint32_t addr, const uint8_t *data, uint16_t len)
       bytes_to_write = m_page_size_in_bytes - page_mod_bytes;
     }
 
-    printf("+++ JOE:(WRITE_PAGE) current_addr(0x%x), bytes_to_write(%d), bytes_left(%d)\n",
-	   current_addr, bytes_to_write, bytes_left);
-
     // Write bytes in current page
-    write_page_data(current_addr, data + len - bytes_left, bytes_to_write);
+    write_data(current_addr, data + len - bytes_left, bytes_to_write);
 
     // Prepare for next page
     current_addr += bytes_to_write;
@@ -380,7 +460,17 @@ void eprom24x_io::write_page(uint32_t addr, const uint8_t *data, uint16_t len)
 
 /////////////////////////////////////////////////////////////////////////////
 
-void eprom24x_io::write_page_data(uint32_t addr, const uint8_t *data, uint16_t len)
+void eprom24x_io::write_byte(uint32_t addr, const uint8_t *data, uint16_t len)
+{
+  // Handle all bytes in specified address range
+  for (unsigned cnt=0; cnt < len; cnt++) {    
+    write_data(addr + cnt, &data[cnt], 1);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void eprom24x_io::write_data(uint32_t addr, const uint8_t *data, uint16_t len)
 {
   struct i2c_rdwr_ioctl_data rdwr_msg;
   struct i2c_msg i2c_msg_list[1];
@@ -419,46 +509,24 @@ void eprom24x_io::write_page_data(uint32_t addr, const uint8_t *data, uint16_t l
 
 /////////////////////////////////////////////////////////////////////////////
 
-void eprom24x_io::write_byte(uint32_t addr, const uint8_t *data, uint16_t len)
+void eprom24x_io::erase_page(void)
 {
-  // Handle all bytes in specified address range
-  for (unsigned cnt=0; cnt < len; cnt++) {
+  unsigned nr_pages = m_eprom_size_in_bytes / m_page_size_in_bytes;
 
-    printf("+++ JOE:(WRITE_BYTE) addr(0x%x), cnt(%d), data(0x%x)\n",
-	   addr+cnt, cnt, data[cnt]);
-
-    write_byte_data(addr + cnt, &data[cnt]);
+  // Write erase data to entire chip address range
+  for (unsigned page=0; page < nr_pages; page++) {
+    write_data(page * m_page_size_in_bytes, m_erase_buffer, m_page_size_in_bytes);
   }
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-void eprom24x_io::write_byte_data(uint32_t addr, const uint8_t *data)
+void eprom24x_io::erase_byte(void)
 {
-  // Step 1 : Set address
-  //          High address byte shall be sent first
-  if (m_nr_address_bytes == 1) {
-    m_page_write_buffer[0] = LOW_BYTE(addr);
-  } else {
-    m_page_write_buffer[0] = HIGH_BYTE(addr);
-    m_page_write_buffer[1] = LOW_BYTE(addr);
+  // Write erase data to entire chip address range
+  for (unsigned cnt=0; cnt < m_eprom_size_in_bytes; cnt++) {    
+    write_data(cnt, m_erase_buffer, 1);
   }
-
-  // Step 2 : Copy user data to page write buffer
-  m_page_write_buffer[m_nr_address_bytes] = *data;
-
-  // Step 3 : Write address and data
-  if ( write(m_i2c_fd,
-	     (void *) m_page_write_buffer,
-	     (size_t) (m_nr_address_bytes + 1)) != (m_nr_address_bytes + 1) ) {
-
-    THROW_RXP(EPROM24x_LINUX_ERROR, EPROM24x_I2C_OPERATION_FAILED,
-	      "Byte write failed to set addr(0x%x) and data(0x%x), device(%s)",
-	      addr, *data, m_i2c_dev.c_str());
-  }
-
-  // Step 4 : Wait for completition with device specific timeout
-  wait_eprom_ready(m_page_write_time, WRITE_POLL_INTERVAL);
 }
 
 /////////////////////////////////////////////////////////////////////////////
