@@ -1,0 +1,5 @@
+TMP102 is a digital temperature sensor (Texas Instruments).
+Features a SMBus/two-wire interface.
+
+SMBus is built on I2C and is therefore generally compatible
+with I2C devices.
