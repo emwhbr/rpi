@@ -1,0 +1,82 @@
+C++ class 'tmp102_io' encapsulates functionality for using the
+digital temperature sensor TMP102 (Texas Instruments).
+
+Note! This class is not thread safe and there are no features
+      that protects the I2C bus from multiple callers.
+      The class only includes the basic functions for
+      operating the TMP102.
+
+Files:
+------
+build.sh		Build script for this project
+Makefile	      	Makefile for this project
+
+build_clean.sh		Wrapper script for clean build
+build_dbg.sh		Wrapper script for debug build
+build_rel.sh		Wrapper script for release build
+
+obj/			Directory for the result of the build
+
+src/
+  tmp102_io.h		Implements the
+  tmp102_io.cpp		C++ class 'tmp102_io'
+
+  test_tmp102.cpp	Test application
+
+README			This file
+
+Example output from test application (test_tmp102.cpp):
+-------------------------------------------------------
+
+-----------------------------------
+------ TMP102 TEST MENU -----------
+-----------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+100. Exit
+
+Enter choice : 1
+Extended mode [1=yes, 0=no]: 0
+-----------------------------------
+------ TMP102 TEST MENU -----------
+-----------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+100. Exit
+
+Enter choice : 3
+Configuration word: 60a0
+spare: 0
+em   : 0
+al   : 1
+cr0  : 0
+cr1  : 1
+sd   : 0
+tm   : 0
+pol  : 0
+f0   : 0
+f1   : 0
+r0   : 1
+r1   : 1
+os   : 0
+-----------------------------------
+------ TMP102 TEST MENU -----------
+-----------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+100. Exit
+
+Enter choice : 5
+Temperature = 24.500000

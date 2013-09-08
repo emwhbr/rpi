@@ -1,5 +1,58 @@
 TMP102 is a digital temperature sensor (Texas Instruments).
-Features a SMBus/two-wire interface.
+Features a SMBus/two-wire interface. SMBus is built on I2C
+and is therefore generally compatible with I2C devices.
 
-SMBus is built on I2C and is therefore generally compatible
-with I2C devices.
+---------------------------------
+-- Scan I2C bus #1 for devices --
+---------------------------------
+> i2cdetect -y 1
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- 48 -- -- -- -- -- -- -- 
+50: 50 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+Two devices was found:
+    0x48    TMP102, Digital temperature sensor
+    0x50    24xx, Serial EEPROM
+
+---------------------------------
+-- Read CONFIGURATION register --
+---------------------------------
+> i2cget -y 1 0x48 0x1 w
+0xa060
+
+Chip sends MSB first, bytes needs to be reversed: 0x60a0
+
+---------------------------------
+-- Read TEMPERATURE register   --
+---------------------------------
+i2cget -y 1 0x48 0x0 w
+0x8018
+
+Chip sends MSB first, bytes needs to be reversed: 0x1880
+Convert to temperature: (0x1880 >> 4) = 0x188 = 392
+                        392 x 0.0625  = 24.5
+
+---------------------------------
+-- Read THIGH register         --
+---------------------------------
+i2cget -y 1 0x48 0x3 w
+0x0050
+
+Chip sends MSB first, bytes needs to be reversed: 0x5000
+Convert to temperature: (0x5000 >> 4) = 0x500 = 1280
+                        1280 x 0.0625 = 80.0
+
+---------------------------------
+-- Read LOW register           --
+---------------------------------
+i2cget -y 1 0x48 0x2 w
+0x004b
+
+Chip sends MSB first, bytes needs to be reversed: 0x4b00
+Convert to temperature: (0x4b00 >> 4) = 0x4b0 = 1200
+                        1200 x 0.0625 = 75.0
