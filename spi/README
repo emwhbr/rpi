@@ -1,0 +1,49 @@
+Hardware
+--------
+Broadcom BCM2835 includes three SPI controllers.
+One of the controllers (SPI0) is available on the
+GPIO header P1 according to (ModelB):
+
+MOSI (Pin19)  Master Out Slave In
+MISO (Pin21)  Master In Slave Out
+CLK  (Pin23)  Clock
+CE0  (Pin24)  Chip select #0
+CE1  (Pin26)  Chip select #1
+
+The controller has three independent chip selects.
+Two of them are available on the header (CE0, CE1).
+
+For further information, see BCM 2835 ARM Peripherals.
+
+Linux kernel
+------------
+The Linux kernel includes two drivers for SPI:
+1) spi_bcm2708.ko (Controller driver, hardware specific)
+2) spidev.ko      (Protocol driver, generic)
+
+Kernel source code for Controller driver:
+../drivers/spi/spi-bcm2708.c
+
+The protocol driver has a character device interface:
+/dev/spidevB.C	    (B=Bus, C=Chip select)
+/dev/spidev0.0      (Chip select #0)
+/dev/spidev0.1      (Chip select #1)
+
+Activating the drivers
+----------------------
+To ensure that the drivers are loaded at boot, they
+need to be removed from the blacklist:
+/etc/modprobe.d/raspi-blacklist.conf
+
+Alternatively, the drivers can be loaded manually:
+> modprobe spi-bcm2708
+> modprobe spidev
+
+User space API
+--------------
+#include <linux/spi/spidev.h>
+
+* Use open() and close() on /dev/spidevB.C.
+* Several ioctl() requests are available.
+* SPI transfers are represented using the 
+  struct spi_ioc_transfer.
