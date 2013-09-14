@@ -178,10 +178,6 @@ static void initialize(void)
     return;
   }
 
-  /* Allocate global buffers */
-  g_tx_buf = malloc(G_SPI_BUFFER_SIZE);
-  g_rx_buf = malloc(G_SPI_BUFFER_SIZE);
-
   /* Initialize transmit buffer */
   for (i=0; i < G_SPI_BUFFER_SIZE; i++) {
     g_tx_buf[i] = 0xff - (uint8_t)i;
@@ -211,14 +207,6 @@ static void finalize(void)
       break;
     }
   } while (ce_value > 1);
-
-  /* Free global buffers */
-  if (g_tx_buf) {
-    free(g_tx_buf);
-  }
-  if (g_rx_buf) {
-    free(g_rx_buf);
-  }
 
   /* Do finalization */
   if (raspi_finalize(ce) != RASPI_SUCCESS) {
@@ -271,7 +259,7 @@ static void xfer(void)
   printf("RX-Buffer, %u bytes:\n", nbytes);
   for (i=0; i < nbytes; i++) {
     if (!(i % 8)) {
-      printf("\n");
+      printf("\n0x%03x   ", i);
     }
     printf("0x%02x ", g_rx_buf[i]);
   }
@@ -333,7 +321,19 @@ static void do_test_libraspi(void)
 
 int main(int argc, char *argv[])
 {
+  /* Allocate global buffers */
+  g_tx_buf = malloc(G_SPI_BUFFER_SIZE);
+  g_rx_buf = malloc(G_SPI_BUFFER_SIZE);
+
   do_test_libraspi();
+
+  /* Free global buffers */
+  if (g_tx_buf) {
+    free(g_tx_buf);
+  }
+  if (g_rx_buf) {
+    free(g_rx_buf);
+  }
 
   printf("Goodbye!\n");
   return 0;

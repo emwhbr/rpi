@@ -20,12 +20,12 @@
 
 // Implementation notes:
 // 1. General
-//    JOE: https://www.kernel.org/doc/Documentation/spi/spidev
-//    JOE: https://www.kernel.org/doc/Documentation/spi/spi-summary
+//    https://www.kernel.org/doc/Documentation/spi/spidev
+//    https://www.kernel.org/doc/Documentation/spi/spi-summary
 //
 // 2. Raspberry PI kernel modules:
-//    a) Protocol driver   (spidev.ko)      JOE:Check name
-//    b) Controller driver (spi_bcm2708.ko) JOE:Check name
+//    a) Protocol driver   (spidev.ko)
+//    b) Controller driver (spi-bcm2708.ko)
 //    See .../drivers/spi/spidev.c
 //        .../drivers/spi/spi-bcm2708.c
 //

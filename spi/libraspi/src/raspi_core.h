@@ -35,6 +35,11 @@ using namespace std;
 /////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
+  bool             initialized;
+  pthread_mutex_t  init_mutex;
+} INITIALIZE_INFO;
+
+typedef struct {  
   string             device;          // SPI device file
   sem_t              *master_sem;     // Only one master allowed for a device
   string             master_sem_name; // Semaphore name
@@ -78,8 +83,7 @@ private:
   pthread_mutex_t    m_error_mutex;
 
   // Keep track of initialization
-  bool             m_initialized;
-  pthread_mutex_t  m_init_mutex;
+  INITIALIZE_INFO m_init_info[NR_SPI_DEVICES];
 
   // SPI devices
   SPI_DEV m_spi_dev[NR_SPI_DEVICES];

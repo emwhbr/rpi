@@ -74,8 +74,13 @@ raspi_core::raspi_core(void)
   m_last_error_read = true;
   pthread_mutex_init(&m_error_mutex, NULL); // Use default mutex attributes
 
-  m_initialized = false;
-  pthread_mutex_init(&m_init_mutex, NULL); // Use default mutex attributes
+  m_init_info[RASPI_CE_0].initialized = false;
+  pthread_mutex_init(&m_init_info[RASPI_CE_0].init_mutex,
+		     NULL); // Use default mutex attributes
+
+  m_init_info[RASPI_CE_1].initialized = false;
+  pthread_mutex_init(&m_init_info[RASPI_CE_1].init_mutex,
+		     NULL); // Use default mutex attributes
 
   // Initialize SPI device information
   m_spi_dev[RASPI_CE_0].device = "/dev/spidev0.0";
@@ -94,7 +99,8 @@ raspi_core::raspi_core(void)
 raspi_core::~raspi_core(void)
 {
   pthread_mutex_destroy(&m_error_mutex);
-  pthread_mutex_destroy(&m_init_mutex);
+  pthread_mutex_destroy(&m_init_info[RASPI_CE_0].init_mutex);
+  pthread_mutex_destroy(&m_init_info[RASPI_CE_1].init_mutex);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -140,29 +146,29 @@ long raspi_core::initialize(RASPI_CE ce,
 			    uint32_t speed)
 {
   try {
-    MUTEX_LOCK(m_init_mutex);
+    MUTEX_LOCK(m_init_info[ce].init_mutex);
 
     // Check if already initialized
-    if (m_initialized) {
+    if (m_init_info[ce].initialized) {
       THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_ALREADY_INITIALIZED,
-		"Already initialized");
+		"Already initialized, ce=%d", ce);
     }
 
     // Do the actual initialization
     internal_initialize(ce, mode, bpw, speed);
 
     // Initialization completed
-    m_initialized = true;
-    MUTEX_UNLOCK(m_init_mutex);
+    m_init_info[ce].initialized = true;
+    MUTEX_UNLOCK(m_init_info[ce].init_mutex);
 
     return RASPI_SUCCESS;
   }
   catch (raspi_exception &rxp) {
-    MUTEX_UNLOCK(m_init_mutex);
+    MUTEX_UNLOCK(m_init_info[ce].init_mutex);
     return set_error(rxp);
   }
   catch (...) {
-    MUTEX_UNLOCK(m_init_mutex);
+    MUTEX_UNLOCK(m_init_info[ce].init_mutex);
     return set_error(RXP(RASPI_INTERNAL_ERROR, RASPI_UNEXPECTED_EXCEPTION, NULL));
   }
 }
@@ -172,29 +178,29 @@ long raspi_core::initialize(RASPI_CE ce,
 long raspi_core::finalize(RASPI_CE ce)
 {
   try {
-    MUTEX_LOCK(m_init_mutex);
+    MUTEX_LOCK(m_init_info[ce].init_mutex);
 
     // Check if initialized
-    if (!m_initialized) {
+    if (!m_init_info[ce].initialized) {
       THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_NOT_INITIALIZED,
-		"Not initialized");
+		"Not initialized, ce=%d", ce);
     }
 
     // Do the actual finalization
     internal_finalize(ce);
 
     // Finalization completed
-    m_initialized = false;
-    MUTEX_UNLOCK(m_init_mutex);
+    m_init_info[ce].initialized = false;
+    MUTEX_UNLOCK(m_init_info[ce].init_mutex);
 
     return RASPI_SUCCESS;
   }
   catch (raspi_exception &rxp) {
-    MUTEX_UNLOCK(m_init_mutex);
+    MUTEX_UNLOCK(m_init_info[ce].init_mutex);
     return set_error(rxp);
   }
   catch (...) {
-    MUTEX_UNLOCK(m_init_mutex);
+    MUTEX_UNLOCK(m_init_info[ce].init_mutex);
     return set_error(RXP(RASPI_INTERNAL_ERROR, RASPI_UNEXPECTED_EXCEPTION, NULL));
   }
 }
@@ -208,22 +214,22 @@ long raspi_core::xfer(RASPI_CE ce,
 {
   try {
     // Check if not initialized
-    if (!m_initialized) {
+    if (!m_init_info[ce].initialized) {
       THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_NOT_INITIALIZED,
-		"Not initialized");
+		"Not initialized, ce=%d", ce);
     }
 
     // Check input values
     if (!tx_buf) {
       THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
-		"tx_buf is null pointer");
+		"tx_buf is null pointer, ce=%d", ce);
     }
 
     if (!rx_buf) {
       THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
-		"rx_buf is null pointer");
+		"rx_buf is null pointer, ce=%d", ce);
     }
-    
+
     // Do the actual work
     return m_spi_dev[ce].io_auto->xfer(tx_buf,
 				       rx_buf,
@@ -388,12 +394,18 @@ void raspi_core::internal_initialize(RASPI_CE ce,
   // Only one master allowed in the system for each device
   check_one_master(ce);
 
-  // Create the i/o object with garbage collector
-  raspi_io *io_ptr = new raspi_io(m_spi_dev[ce].device.c_str());
-  m_spi_dev[ce].io_auto = auto_ptr<raspi_io>(io_ptr);
+  try {
+    // Create the i/o object with garbage collector
+    raspi_io *io_ptr = new raspi_io(m_spi_dev[ce].device.c_str());
+    m_spi_dev[ce].io_auto = auto_ptr<raspi_io>(io_ptr);
 
-  // Initialize i/o object
-  m_spi_dev[ce].io_auto->initialize(mode, bpw, speed);
+    // Initialize i/o object
+    m_spi_dev[ce].io_auto->initialize(mode, bpw, speed);
+  }
+  catch (...) {
+    finalize_one_master(ce);
+    throw;
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////
