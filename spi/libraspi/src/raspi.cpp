@@ -41,12 +41,14 @@ long raspi_get_error_string(long error_code,
 long raspi_initialize(RASPI_CE ce,
 		      RASPI_MODE mode,
 		      RASPI_BPW bpw,
-		      uint32_t speed)
+		      uint32_t speed,
+		      int flags)
 {
   return g_object.initialize(ce,
 			     mode,
 			     bpw,
-			     speed);
+			     speed,
+			     flags);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -67,6 +69,17 @@ long raspi_xfer(RASPI_CE ce,
 		       tx_buf,
 		       rx_buf,
 		       nbytes);
+}
+
+////////////////////////////////////////////////////////////////
+
+long raspi_xfer_n(RASPI_CE ce,
+		  const RASPI_TRANSFER *transfer_list,
+		  unsigned transfers)
+{
+  return g_object.xfer_n(ce,
+			 transfer_list,
+			 transfers);
 }
 
 ////////////////////////////////////////////////////////////////

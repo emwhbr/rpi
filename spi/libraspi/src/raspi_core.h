@@ -64,7 +64,8 @@ public:
   long initialize(RASPI_CE ce,
 		  RASPI_MODE mode,
 		  RASPI_BPW bpw,
-		  uint32_t speed);
+		  uint32_t speed,
+		  int flags);
 
   long finalize(RASPI_CE ce);
 
@@ -72,6 +73,10 @@ public:
 	    const void *tx_buf,
 	    void *rx_buf,
 	    uint32_t nbytes);
+
+  long xfer_n(RASPI_CE ce,
+	      const RASPI_TRANSFER *transfer_list,
+	      unsigned transfers);
 
   long test_get_lib_prod_info(RASPI_LIB_PROD_INFO *prod_info);
 
@@ -88,6 +93,11 @@ private:
   // SPI devices
   SPI_DEV m_spi_dev[NR_SPI_DEVICES];
 
+  // Protect the SPI bus because of:
+  // - The two device files (chip select) share one bus.
+  // - One device file (chip select) can be shared among threads.
+  sem_t *m_spi_bus_protect_sem;
+
   // Private member functions
   long set_error(raspi_exception rxp);
   long update_error(raspi_exception rxp);
@@ -100,13 +110,16 @@ private:
   void internal_initialize(RASPI_CE ce,
 			   RASPI_MODE mode,
 			   RASPI_BPW bpw,
-			   uint32_t speed);
+			   uint32_t speed,
+			   int flags);
 
   void internal_finalize(RASPI_CE ce);
 
   void check_one_master(RASPI_CE ce);
 
   void finalize_one_master(RASPI_CE ce);
+
+  void finalize_spi_bus_protector_sem(void);
 };
 
 #endif // __RASPI_CORE_H__

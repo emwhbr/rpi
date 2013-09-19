@@ -15,6 +15,8 @@
 #include <strings.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <sys/select.h>
 
 #include "raspi.h"
 
@@ -53,13 +55,60 @@ uint8_t *g_rx_buf = NULL;
  *       Function prototypes
  * ---------------------------------
  */
+static void print_rx_buf(unsigned nbytes);
+static int kbhit(void);
+static int getch(void);
 static void get_prod_info(void);
 static void get_last_error(void);
 static void initialize(void);
 static void finalize(void);
 static void xfer(void);
+static void xfer_n(void);
+static void xfer_n_dynamic(void);
 static void do_test_libraspi(void);
 
+/*****************************************************************/
+
+static void print_rx_buf(unsigned nbytes)
+{
+  unsigned i;
+
+  /* Print receive buffer */
+  printf("RX-Buffer, %u bytes:\n", nbytes);
+  for (i=0; i < nbytes; i++) {
+    if (!(i % 8)) {
+      printf("\n0x%03x   ", i);
+    }
+    printf("0x%02x ", g_rx_buf[i]);
+  }
+  printf("\n");
+}
+
+/*****************************************************************/
+
+static int kbhit(void)
+{
+  struct timeval tv = { 0L, 0L };
+  fd_set fds;
+
+  FD_ZERO(&fds);
+  FD_SET(0, &fds);
+  return select(1, &fds, NULL, NULL, &tv);
+}
+
+/*****************************************************************/
+
+static int getch(void)
+{
+  int r;
+  unsigned char c;
+
+  if ((r = read(0, &c, sizeof(c))) < 0) {
+    return r;
+  } else {
+    return c;
+  }
+}
 
 /*****************************************************************/
 
@@ -114,10 +163,12 @@ static void initialize(void)
   unsigned ce_value;
   unsigned mode_value;
   unsigned bpw_value;
+  unsigned non_block_value;
   RASPI_CE   ce   = RASPI_CE_0;
   RASPI_MODE mode = RASPI_MODE_0;
   RASPI_BPW  bpw  = RASPI_BPW_8;
   uint32_t speed;
+  int flags = 0;
   unsigned i;
 
   /* User input */
@@ -168,12 +219,26 @@ static void initialize(void)
 
   printf("Enter bitrate[Hz]: ");
   scanf("%u", &speed);
-    
+
+  do {
+    printf("Non-blocking[0=false, 1=true]: ");
+    scanf("%u", &non_block_value);
+    switch (non_block_value) {
+    case 0:
+      flags = 0;
+      break;
+    case 1:
+      flags = RASPI_F_NONBLOCK;
+      break;
+    }
+  } while (non_block_value > 1);
+
   /* Do initialization */
   if (raspi_initialize(ce,
 		       mode,
 		       bpw,
-		       speed) != RASPI_SUCCESS) {
+		       speed,
+		       flags) != RASPI_SUCCESS) {
     printf(TEST_LIBRASPI_ERROR_MSG);
     return;
   }
@@ -222,7 +287,6 @@ static void xfer(void)
   unsigned ce_value;
   RASPI_CE ce = RASPI_CE_0;
   uint32_t nbytes;
-  unsigned i;
   
   /* User input */  
   do {
@@ -256,14 +320,138 @@ static void xfer(void)
   }
 
   /* Print receive buffer */
-  printf("RX-Buffer, %u bytes:\n", nbytes);
-  for (i=0; i < nbytes; i++) {
-    if (!(i % 8)) {
-      printf("\n0x%03x   ", i);
+  print_rx_buf(nbytes);
+}
+
+/*****************************************************************/
+
+static void xfer_n(void)
+{
+  unsigned ce_value;
+  RASPI_CE ce = RASPI_CE_0;
+  RASPI_TRANSFER transfer_list[3];
+  
+  /* User input */  
+  do {
+    printf("Enter CE[0..1]: ");
+    scanf("%u", &ce_value);
+    switch (ce_value) {
+    case 0:
+      ce = RASPI_CE_0;
+      break;
+    case 1:
+      ce = RASPI_CE_1;
+      break;
     }
-    printf("0x%02x ", g_rx_buf[i]);
+  } while (ce_value > 1);
+
+  /* Clear receive buffer */
+  bzero((void *)g_rx_buf, G_SPI_BUFFER_SIZE);
+
+  /* Prepare transfers */
+  transfer_list[0].tx_buf = &g_tx_buf[0];
+  transfer_list[0].rx_buf = &g_rx_buf[0];
+  transfer_list[0].nbytes = 2;
+  transfer_list[0].delay_usecs = 10;
+  transfer_list[0].ce_deactive = false;
+
+  transfer_list[1].tx_buf = &g_tx_buf[8];
+  transfer_list[1].rx_buf = &g_rx_buf[8];
+  transfer_list[1].nbytes = 4;
+  transfer_list[1].delay_usecs = 20;
+  transfer_list[1].ce_deactive = true;
+
+  transfer_list[2].tx_buf = &g_tx_buf[16];
+  transfer_list[2].rx_buf = &g_rx_buf[16];
+  transfer_list[2].nbytes = 6;
+  transfer_list[2].delay_usecs = 0;
+  transfer_list[2].ce_deactive = false;
+
+  /* Do transfers */
+  if (raspi_xfer_n(ce,
+		   transfer_list,
+		   3) != RASPI_SUCCESS) {
+    printf(TEST_LIBRASPI_ERROR_MSG);
+    return;
   }
-  printf("\n");
+
+  /* Print receive buffer */
+  print_rx_buf(G_SPI_BUFFER_SIZE);
+}
+
+/*****************************************************************/
+
+static void xfer_n_dynamic(void)
+{
+  unsigned ce_value;
+  RASPI_CE ce = RASPI_CE_0;
+  RASPI_TRANSFER transfer_list[2];
+  unsigned i;
+  bool bad_transfer;
+  
+  /* User input */  
+  do {
+    printf("Enter CE[0..1]: ");
+    scanf("%u", &ce_value);
+    switch (ce_value) {
+    case 0:
+      ce = RASPI_CE_0;
+      break;
+    case 1:
+      ce = RASPI_CE_1;
+      break;
+    }
+  } while (ce_value > 1);
+
+  /* Prepare transfers */
+  transfer_list[0].tx_buf = &g_tx_buf[0];
+  transfer_list[0].rx_buf = &g_rx_buf[8];
+  transfer_list[0].nbytes = 8;
+  transfer_list[0].delay_usecs = 0;
+  transfer_list[0].ce_deactive = false;
+
+  transfer_list[1].tx_buf = &g_tx_buf[8];
+  transfer_list[1].rx_buf = &g_rx_buf[24];
+  transfer_list[1].nbytes = 8;
+  transfer_list[1].delay_usecs = 0;
+  transfer_list[1].ce_deactive = false;
+
+  printf("Press ENTER to quit...\n");
+  while ( !kbhit() ) {
+
+    /* Clear receive buffer */
+    bzero((void *)g_rx_buf, G_SPI_BUFFER_SIZE);
+
+    /* Do transfers */
+    if (raspi_xfer_n(ce,
+		     transfer_list,
+		     2) != RASPI_SUCCESS) {
+      printf(TEST_LIBRASPI_ERROR_MSG);
+      return;
+    }
+
+    /* Check transfers */
+    bad_transfer = false;
+    for (i=0; i < 8; i++) {
+      if ( g_rx_buf[8+i] != g_tx_buf[0+i] ) {
+	bad_transfer = true;
+      }
+      if ( g_rx_buf[24+i] != g_tx_buf[8+i] ) {
+	bad_transfer = true;
+      }
+      if (bad_transfer) {
+	printf(TEST_LIBRASPI_ERROR_MSG);
+	/* Print receive buffer */
+	print_rx_buf(G_SPI_BUFFER_SIZE);
+	break;
+      }
+    }
+    if (bad_transfer) {
+      printf("Press ENTER to quit...\n");
+      break;
+    } 
+  }
+  getch(); /* Consume the character */
 }
 
 /*****************************************************************/
@@ -276,6 +464,8 @@ static void print_menu(void)
   printf("  3. initialize\n");
   printf("  4. finalize\n");
   printf("  5. xfer\n");
+  printf("  6. xfer_n\n");
+  printf("  7. xfer_n (dynamic test)\n");
   printf("100. Exit\n\n");
 }
 
@@ -306,6 +496,12 @@ static void do_test_libraspi(void)
       break;
     case 5:
       xfer();
+      break;
+    case 6:
+      xfer_n();
+      break;
+    case 7:
+      xfer_n_dynamic();
       break;
     case 100: /* Exit */
       break;

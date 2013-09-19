@@ -10,6 +10,7 @@
 // ************************************************************************
 
 #include <strings.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -47,9 +48,11 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-raspi_io::raspi_io(const char *spi_dev)
+raspi_io::raspi_io(const char *spi_dev,
+		   sem_t *spi_bus_protect_sem)
 {
   m_spi_dev = spi_dev;
+  m_spi_bus_protect_sem = spi_bus_protect_sem;
 
   init_members();
 }
@@ -64,11 +67,15 @@ raspi_io::~raspi_io(void)
 
 void raspi_io::initialize(RASPI_MODE mode,
 			  RASPI_BPW bpw,
-			  uint32_t speed)
+			  uint32_t speed,
+			  bool blocking)
 {
   int rc;
   uint8_t spi_mode = RASPI_MODE_0;
   uint8_t spi_bpw  = 8;
+
+  // Define runtime behaviour
+  m_blocking = blocking;
 
   // Open SPI device
   rc = open(m_spi_dev.c_str(), O_RDWR);
@@ -129,11 +136,8 @@ void raspi_io::initialize(RASPI_MODE mode,
 
 void raspi_io::finalize(void)
 {
-  int rc;
-
   // Close SPI device
-  rc = close(m_spi_fd);
-  if (rc == -1) {
+  if ( close(m_spi_fd) == -1 ) {
     THROW_RXP(RASPI_LINUX_ERROR, RASPI_FILE_OPERATION_FAILED,
 	      "close failed for device file %s", m_spi_dev.c_str());
   }
@@ -156,13 +160,66 @@ long raspi_io::xfer(const void *tx_buf,
   spi_transfer.tx_buf = (uint64_t) tx_buf;
   spi_transfer.rx_buf = (uint64_t) rx_buf;
   spi_transfer.len = nbytes;
+  
+  // Lockdown the SPI transfer operation
+  lock_spi();
 
-  // Do SPI transfer
-  if ( ioctl(m_spi_fd, SPI_IOC_MESSAGE(1), &spi_transfer) < 0 ) {
-    THROW_RXP(RASPI_LINUX_ERROR, RASPI_SPI_OPERATION_FAILED,
-	      "Failed to transfer bytes(%u), device(%s)",
-	      nbytes, m_spi_dev.c_str());
+  try {
+    // Do SPI transfer
+    if ( ioctl(m_spi_fd, SPI_IOC_MESSAGE(1), &spi_transfer) < 0 ) {
+      THROW_RXP(RASPI_LINUX_ERROR, RASPI_SPI_OPERATION_FAILED,
+		"Failed to transfer bytes(%u), device(%s)",
+		nbytes, m_spi_dev.c_str());
+    }
   }
+  catch (...) {
+    sem_post(m_spi_bus_protect_sem);
+    throw;
+  }
+
+  // Lockup the SPI transfer operation
+  unlock_spi();
+
+  return RASPI_SUCCESS;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long raspi_io::xfer_n(const RASPI_TRANSFER *transfer_list,
+		      unsigned transfers)
+{
+  struct spi_ioc_transfer spi_transfer[transfers];
+
+  // Clear SPI transfers
+  bzero((void *) spi_transfer, sizeof(spi_transfer));
+
+  // Create the SPI transfers
+  for (unsigned i=0; i < transfers; i++) {
+    spi_transfer[i].tx_buf = (uint64_t) transfer_list[i].tx_buf;
+    spi_transfer[i].rx_buf = (uint64_t) transfer_list[i].rx_buf;
+    spi_transfer[i].len    = transfer_list[i].nbytes;
+    spi_transfer[i].delay_usecs = transfer_list[i].delay_usecs;
+    spi_transfer[i].cs_change   = (transfer_list[i].ce_deactive ? 1 : 0);
+  }
+
+  // Lockdown the SPI transfers operation
+  lock_spi();
+
+  try {
+    // Do SPI transfers
+    if ( ioctl(m_spi_fd, SPI_IOC_MESSAGE(transfers), spi_transfer) < 0 ) {
+      THROW_RXP(RASPI_LINUX_ERROR, RASPI_SPI_OPERATION_FAILED,
+		"Failed multiple transfers, device(%s)",
+		m_spi_dev.c_str());
+    }
+  }
+  catch (...) {
+    sem_post(m_spi_bus_protect_sem);
+    throw;
+  }
+
+  // Lockup the SPI transfers operation
+  unlock_spi();
 
   return RASPI_SUCCESS;
 }
@@ -176,4 +233,43 @@ long raspi_io::xfer(const void *tx_buf,
 void raspi_io::init_members(void)
 {
   m_spi_fd = 0;
+  m_blocking = true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void raspi_io::lock_spi(void)
+{
+  if (m_blocking) {
+    if ( sem_wait(m_spi_bus_protect_sem) == -1 ) {
+      THROW_RXP(RASPI_LINUX_ERROR, RASPI_SEMAPHORE_OPERATION_FAILED,
+		"sem_wait failed, device(%s)",
+		m_spi_dev.c_str());
+    }
+  }
+  else {
+    if ( sem_trywait(m_spi_bus_protect_sem) == -1 ) {
+      if (errno == EAGAIN) {
+	THROW_RXP(RASPI_LINUX_ERROR, RASPI_OPERATION_WOULD_BLOCK,
+		  "sem_trywait would block, device(%s)",
+		  m_spi_dev.c_str());
+      }
+      else {
+	THROW_RXP(RASPI_LINUX_ERROR, RASPI_SEMAPHORE_OPERATION_FAILED,
+		  "sem_trywait failed, device(%s)",
+		  m_spi_dev.c_str());
+      }
+    }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void raspi_io::unlock_spi(void)
+{
+  if ( sem_post(m_spi_bus_protect_sem) == -1 ) {
+    THROW_RXP(RASPI_LINUX_ERROR, RASPI_SEMAPHORE_OPERATION_FAILED,
+	      "sem_post failed, device(%s)",
+	      m_spi_dev.c_str());
+  }
 }

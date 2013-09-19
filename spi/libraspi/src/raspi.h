@@ -36,14 +36,19 @@ extern "C" {
 #define RASPI_MAX_LIMIT_EXCEEDED            4
 #define RASPI_SEMAPHORE_OPERATION_FAILED    5
 #define RASPI_FILE_OPERATION_FAILED         6
-#define RASPI_SPI_OPERATION_FAILED          7
-#define RASPI_UNEXPECTED_EXCEPTION          8
+#define RASPI_OPERATION_WOULD_BLOCK         7
+#define RASPI_SPI_OPERATION_FAILED          8
+#define RASPI_UNEXPECTED_EXCEPTION          9
 
 /*
  * Error source values
  */
 typedef enum {RASPI_INTERNAL_ERROR, 
 	      RASPI_LINUX_ERROR} RASPI_ERROR_SOURCE;
+/*
+ * Flag values
+ */
+#define RASPI_F_NONBLOCK   0x001
 
 /*
  * Basic API support types
@@ -75,6 +80,15 @@ typedef enum {RASPI_MODE_0,
 	      RASPI_MODE_1,
 	      RASPI_MODE_2,
 	      RASPI_MODE_3} RASPI_MODE; /* SPI mode */
+
+typedef struct {
+  void     *tx_buf;     /* Pointer to the send buffer.    	      */
+  void     *rx_buf;     /* Pointer to the receive buffer. 	      */
+  uint32_t nbytes;      /* Buffer length in bytes.       	      */              
+  uint16_t delay_usecs; /* If nonzero, delay after last bit transfer. */
+  bool     ce_deactive; /* True to deselect device before starting
+			   next transfer. False to keep CE active.    */
+} RASPI_TRANSFER;
 
 /****************************************************************************
 *
@@ -123,7 +137,8 @@ extern long raspi_get_error_string(long error_code,
 * Parameters ce     IN  Identifies the chip select.
 *            mode   IN  SPI mode.
 *            bpw    IN  Bits per word used in SPI transfers.
-*            speed  IN  Bitrate (Hz).  
+*            speed  IN  Bitrate (Hz).
+*            flags  IN  Controls operational behaviour.
 *
 * Error handling Returns RASPI_SUCCESS if successful
 *                otherwise RASPI_FAILURE or RASPI_MUTEX_FAILURE
@@ -132,7 +147,8 @@ extern long raspi_get_error_string(long error_code,
 extern long raspi_initialize(RASPI_CE ce,
 			     RASPI_MODE mode,
 			     RASPI_BPW bpw,
-			     uint32_t speed);
+			     uint32_t speed,
+			     int flags);
 
 /****************************************************************************
 *
@@ -167,6 +183,24 @@ extern long raspi_xfer(RASPI_CE ce,
 		       const void *tx_buf,
 		       void *rx_buf,
 		       uint32_t nbytes);
+
+/****************************************************************************
+*
+* Name raspi_xfer_n
+*
+* Description Performs multiple SPI transfers according to transfer list.
+*
+* Parameters ce              IN   Identifies the chip select.
+*            *transfer_list  IN   Pointer to a list of transfer definitions.
+*            transfers       IN   Number of transfers in list.
+*
+* Error handling Returns RASPI_SUCCESS if successful
+*                otherwise RASPI_FAILURE or RASPI_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long raspi_xfer_n(RASPI_CE ce,
+			 const RASPI_TRANSFER *transfer_list,
+			 unsigned transfers);
 
 /****************************************************************************
 *

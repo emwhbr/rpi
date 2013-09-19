@@ -25,9 +25,10 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBRASPI"
-#define RSTATE           "R1A01"
+#define RSTATE           "R1A02"
 
-#define SPI_MASTER_SEM_NAME "LIBRASPI_MASTER_SEM"
+#define SPI_MASTER_SEM_NAME       "LIBRASPI_MASTER_SEM"
+#define SPI_BUS_PROTECT_SEM_NAME  "LIBRASPI_BUS_PROTECT"
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
@@ -92,6 +93,9 @@ raspi_core::raspi_core(void)
   m_spi_dev[RASPI_CE_1].master_sem = NULL;
   m_spi_dev[RASPI_CE_1].master_sem_name = SPI_MASTER_SEM_NAME"_1";
   m_spi_dev[RASPI_CE_1].io_auto.reset();
+
+  // The SPI bus protector
+  m_spi_bus_protect_sem = NULL;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -143,7 +147,8 @@ long raspi_core::get_error_string(long error_code,
 long raspi_core::initialize(RASPI_CE ce,
 			    RASPI_MODE mode,
 			    RASPI_BPW bpw,
-			    uint32_t speed)
+			    uint32_t speed,
+			    int flags)
 {
   try {
     MUTEX_LOCK(m_init_info[ce].init_mutex);
@@ -155,7 +160,7 @@ long raspi_core::initialize(RASPI_CE ce,
     }
 
     // Do the actual initialization
-    internal_initialize(ce, mode, bpw, speed);
+    internal_initialize(ce, mode, bpw, speed, flags);
 
     // Initialization completed
     m_init_info[ce].initialized = true;
@@ -230,10 +235,69 @@ long raspi_core::xfer(RASPI_CE ce,
 		"rx_buf is null pointer, ce=%d", ce);
     }
 
+    if (!nbytes) {
+      THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		"nbytes is zero, ce=%d", ce);
+    }
+
     // Do the actual work
     return m_spi_dev[ce].io_auto->xfer(tx_buf,
 				       rx_buf,
 				       nbytes);
+  }
+  catch (raspi_exception &rxp) {
+    return set_error(rxp);
+  }
+  catch (...) {
+    return set_error(RXP(RASPI_INTERNAL_ERROR, RASPI_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long raspi_core::xfer_n(RASPI_CE ce,
+			const RASPI_TRANSFER *transfer_list,
+			unsigned transfers)
+{
+  try {
+    // Check if not initialized
+    if (!m_init_info[ce].initialized) {
+      THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_NOT_INITIALIZED,
+		"Not initialized, ce=%d", ce);
+    }
+
+    // Check input values
+    if (!transfer_list) {
+      THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		"transfer_list is null pointer, ce=%d", ce);
+    }
+
+    if (!transfers) {
+      THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		"transfers is zero, ce=%d", ce);
+    }
+
+    for (unsigned i=0; i < transfers; i++) {
+      if (!transfer_list[i].tx_buf) {
+	THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		  "transfer_list[%u].tx_buf is null pointer, ce=%d",
+		  i, ce);
+      }
+      if (!transfer_list[i].rx_buf) {
+	THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		  "transfer_list[%u].rx_buf is null pointer, ce=%d",
+		  i, ce);	
+      }
+      if (!transfer_list[i].nbytes) {
+	THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		  "transfer_list[%u].nbytes is zero, ce=%d",
+		  i, ce);
+      }
+    }
+
+    // Do the actual work
+    return m_spi_dev[ce].io_auto->xfer_n(transfer_list,
+					 transfers);
   }
   catch (raspi_exception &rxp) {
     return set_error(rxp);
@@ -389,21 +453,42 @@ long raspi_core::internal_test_get_lib_prod_info(RASPI_LIB_PROD_INFO *prod_info)
 void raspi_core::internal_initialize(RASPI_CE ce,
 				     RASPI_MODE mode,
 				     RASPI_BPW bpw,
-				     uint32_t speed)
+				     uint32_t speed,
+				     int flags)
 {
+  bool blocking;
+
   // Only one master allowed in the system for each device
   check_one_master(ce);
 
+  // Check if non-blocking runtime mode is requested
+  blocking = (flags & RASPI_F_NONBLOCK) == 0;
+
   try {
+    // Create or open the SPI bus protector semaphore
+    // There is only one instance of this semaphore in the system
+    m_spi_bus_protect_sem = sem_open(SPI_BUS_PROTECT_SEM_NAME,
+				     O_CREAT,
+				     S_IRWXU | S_IRWXG | S_IRWXO,
+				     1); // Semaphore is available
+
+    if (m_spi_bus_protect_sem == SEM_FAILED) {
+      THROW_RXP(RASPI_LINUX_ERROR, RASPI_SEMAPHORE_OPERATION_FAILED,
+		"sem_open for %s",
+		SPI_BUS_PROTECT_SEM_NAME);
+    }
+
     // Create the i/o object with garbage collector
-    raspi_io *io_ptr = new raspi_io(m_spi_dev[ce].device.c_str());
+    raspi_io *io_ptr = new raspi_io(m_spi_dev[ce].device.c_str(),
+				    m_spi_bus_protect_sem);
     m_spi_dev[ce].io_auto = auto_ptr<raspi_io>(io_ptr);
 
     // Initialize i/o object
-    m_spi_dev[ce].io_auto->initialize(mode, bpw, speed);
+    m_spi_dev[ce].io_auto->initialize(mode, bpw, speed, blocking);
   }
   catch (...) {
     finalize_one_master(ce);
+    finalize_spi_bus_protector_sem();
     throw;
   }
 }
@@ -413,6 +498,8 @@ void raspi_core::internal_initialize(RASPI_CE ce,
 void raspi_core::internal_finalize(RASPI_CE ce)
 {
   finalize_one_master(ce);
+
+  finalize_spi_bus_protector_sem();
 
   // Finalize the i/o object
   m_spi_dev[ce].io_auto->finalize();
@@ -464,5 +551,30 @@ void raspi_core::finalize_one_master(RASPI_CE ce)
 		"sem_unlink for %s",
 		m_spi_dev[ce].master_sem_name.c_str());
     }
+  }  
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void raspi_core::finalize_spi_bus_protector_sem(void)
+{
+  int rc;
+
+  // Destroy the SPI bus protector semaphore
+  if (m_spi_bus_protect_sem) {
+    rc = sem_close(m_spi_bus_protect_sem);
+    if (rc) {
+      THROW_RXP(RASPI_LINUX_ERROR, RASPI_SEMAPHORE_OPERATION_FAILED,
+		"sem_close for %s",
+		SPI_BUS_PROTECT_SEM_NAME);
+    }
+    rc = sem_unlink(SPI_BUS_PROTECT_SEM_NAME);
+    if (rc && (errno != ENOENT)) { // Ignore error indiacting unlink already
+                                   // done, possibly by other process
+      THROW_RXP(RASPI_LINUX_ERROR, RASPI_SEMAPHORE_OPERATION_FAILED,
+		"sem_unlink for %s",
+		SPI_BUS_PROTECT_SEM_NAME);      
+    }
+    m_spi_bus_protect_sem = NULL;
   }  
 }
