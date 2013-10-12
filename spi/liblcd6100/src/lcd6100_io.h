@@ -13,6 +13,7 @@
 #define __LCD6100_IO_H__
 
 #include "lcd6100.h"
+#include "lcd6100_bmp.h"
 #include "lcd6100_font_small.h"
 #include "lcd6100_font_medium.h"
 #include "lcd6100_font_large.h"
@@ -53,6 +54,11 @@ public:
 		      uint8_t end_col,
 		      bool filled,
 		      LCD6100_COLOUR colour);
+
+  void draw_bmp_image(uint8_t row,
+		      uint8_t col,
+		      string bmp_image,
+		      bool scale);
 
   void write_char(char c,
 		  uint8_t row,

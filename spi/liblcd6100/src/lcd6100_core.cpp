@@ -23,7 +23,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBLCD6100"
-#define RSTATE           "R1A01"
+#define RSTATE           "R1A02"
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
@@ -186,6 +186,33 @@ long lcd6100_core::finalize(void)
 
 /////////////////////////////////////////////////////////////////////////////
 
+long lcd6100_core::clear_screen(void)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    LCD6100_COLOUR colour;
+    colour.wd = LCD6100_RGB_BLACK;
+
+    // Do the actual work
+    m_lcd_io_auto->fill_screen(colour);
+
+    return LCD6100_SUCCESS;
+  }
+  catch (lcd6100_exception &lxp) {
+    return set_error(lxp);
+  }
+  catch (...) {
+    return set_error(LXP(LCD6100_INTERNAL_ERROR, LCD6100_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
 long lcd6100_core::fill_screen(LCD6100_COLOUR colour)
 {
   try {
@@ -325,6 +352,44 @@ long lcd6100_core::draw_rectangle(uint8_t start_row,
 				  end_row, end_col,
 				  filled,
 				  colour);
+    return LCD6100_SUCCESS;
+  }
+  catch (lcd6100_exception &lxp) {
+    return set_error(lxp);
+  }
+  catch (...) {
+    return set_error(LXP(LCD6100_INTERNAL_ERROR, LCD6100_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long lcd6100_core::draw_bmp_image(uint8_t row,
+				  uint8_t col,
+				  string bmp_image,
+				  bool scale)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Check input values
+    if ( (row > LCD6100_ROW_MAX_ADDR) ||
+	 (col > LCD6100_COL_MAX_ADDR) ) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_BAD_ARGUMENT,
+		"Row(%u), max(%u). Col(%u), max(%u)",
+		row, LCD6100_ROW_MAX_ADDR,
+		col, LCD6100_COL_MAX_ADDR);
+    }
+
+    // Do the actual work
+    m_lcd_io_auto->draw_bmp_image(row, col,
+				  bmp_image,
+				  scale);
+
     return LCD6100_SUCCESS;
   }
   catch (lcd6100_exception &lxp) {
@@ -577,6 +642,9 @@ long lcd6100_core::internal_get_error_string(long error_code,
     break;
   case LCD6100_SPI_LAYER_ERROR:
     strncpy(error_string, "SPI layer error", str_len);
+    break;
+  case LCD6100_BMP_IMAGE_ERROR:
+    strncpy(error_string, "BMP image error", str_len);
     break;
   case LCD6100_UNEXPECTED_EXCEPTION:
     strncpy(error_string, "Unexpected exception", str_len);

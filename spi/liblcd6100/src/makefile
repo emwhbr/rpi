@@ -19,14 +19,21 @@ OBJS = $(OBJ_DIR)/lcd6100.o \
 	$(OBJ_DIR)/lcd6100_font.o \
 	$(OBJ_DIR)/lcd6100_font_small.o \
 	$(OBJ_DIR)/lcd6100_font_medium.o \
-	$(OBJ_DIR)/lcd6100_font_large.o
+	$(OBJ_DIR)/lcd6100_font_large.o \
+	$(OBJ_DIR)/lcd6100_bmp.o
+
+EASYBMP_SRC_DIR = $(EASYBMP_DIR)
+EASYBMP_OBJ = $(OBJ_DIR)/EasyBMP.o
 
 # ----- Targets
 
 .PHONY : lib_clean
 
-$(LIB_NAME) : $(OBJS)
-	$(AR) rcs $(LIB_NAME) $(OBJS)
+$(EASYBMP_OBJ) :
+	$(CPP) -Wall $(OPTIMIZE) -I $(EASYBMP_INC_DIR) -c $(EASYBMP_SRC_DIR)/EasyBMP.cpp -o $(EASYBMP_OBJ)
+
+$(LIB_NAME) : $(OBJS) $(EASYBMP_OBJ)
+	$(AR) rcs $(LIB_NAME) $(OBJS) $(EASYBMP_OBJ)
 
 lib_clean :
-	rm -f $(OBJS) $(LIB_NAME) *~
+	rm -f $(OBJS) $(EASYBMP_OBJ) $(LIB_NAME) *~

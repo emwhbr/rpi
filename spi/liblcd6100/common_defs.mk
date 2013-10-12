@@ -40,6 +40,9 @@ RASPI_DIR = ../../libraspi
 RASPI_OBJ_DIR = $(RASPI_DIR)/obj
 RASPI_INC_DIR = $(RASPI_DIR)/src
 
+EASYBMP_DIR = ../EasyBMP
+EASYBMP_INC_DIR = $(EASYBMP_DIR)
+
 LIB_NAME = $(OBJ_DIR)/liblcd6100.a
 TEST_APP_NAME = $(OBJ_DIR)/test_liblcd6100_$(KIND).$(ARCH)
 
@@ -54,7 +57,7 @@ COMP_FLAGS = $(LINK_FLAGS) -c
 
 # ----- Includes
 
-LIBLCD6100_INCLUDE = -I $(INC_DIR) -I $(RASPI_INC_DIR)
+LIBLCD6100_INCLUDE = -I $(INC_DIR) -I $(RASPI_INC_DIR) -I $(EASYBMP_INC_DIR)
 
 INCLUDE = $(LIBLCD6100_INCLUDE)
 
@@ -67,7 +70,7 @@ LIB_DIRS      = $(LD_LIBLCD6100)
 
 LIBLCD6100 = -llcd6100 -lraspi
 
-LIBSX = -lstdc++ -lgcc -lpthread -lrt
+LIBSX = -lstdc++ -lgcc -lpthread -lrt -lm
 LIBS  = $(LIBLCD6100) $(LIBSX)
 
 # ------ Build rules
