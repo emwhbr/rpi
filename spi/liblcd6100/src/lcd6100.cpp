@@ -53,6 +53,13 @@ long lcd6100_finalize(void)
 
 ////////////////////////////////////////////////////////////////
 
+long lcd6100_clear_screen(void)
+{
+  return g_object.clear_screen();
+}
+
+////////////////////////////////////////////////////////////////
+
 long lcd6100_fill_screen(LCD6100_COLOUR colour)
 {
   return g_object.fill_screen(colour);
@@ -93,6 +100,18 @@ long lcd6100_draw_rectangle(uint8_t start_row,
 				 end_row, end_col,
 				 filled,
 				 colour);
+}
+
+////////////////////////////////////////////////////////////////
+
+long lcd6100_draw_bmp_image(uint8_t row,
+			    uint8_t col,
+			    const char *bmp_image,
+			    bool scale)
+{
+  return g_object.draw_bmp_image(row, col,
+				 bmp_image,
+				 scale);
 }
 
 ////////////////////////////////////////////////////////////////

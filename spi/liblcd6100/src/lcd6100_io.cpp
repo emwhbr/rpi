@@ -20,9 +20,39 @@
 // Implementation notes:
 // 1. Assumes Philips LCD controller PCF8833.
 //
-// 2. Line drawing algorithm devloped by Jack Elton Bresenham (1962).
+// 2. LCD6610 has a 132 x 132 pixel matrix.
+//    Coordinate system has its origo in the bottom left corner:
+//    (row, col)th pixel is
+//      col pixels from the left
+//      row pixels from the bottom
+//                              ____
+//                              |  |
+//          ___________________|____|_____
+//          |                            |
+//          |-----------------------------
+//    ^     |                            | (Row=131, Col=131)
+//    |     |                            |
+//    |     |                            |
+//    |     |                            |
+//    |     |                            |
+//    |     |                            |
+//    |     |                            |
+//   ROW    |                            |
+//    |     |                            |                            |
+//    |     |                            |
+//    |     |                            |
+//    |     |                            |
+//    |     |____________________________| (Row=0, Col=131)
+//    |   origo
+//    |----------------- COL ----------------------->
 //
-// 3. JOE: Wrap-around feature
+// 3. Each pixel has 12-bit RGB, 4096 colours (rrrrggggbbbb).
+//
+// 4. We make use of PCF8833 "wrap around" feature.
+//    By defining a drawing box, the memory can be filled by
+//    successive memory writes until all pixels have been written.
+//
+// 5. Line drawing algorithm devloped by Jack Elton Bresenham (1962).
 //
 
 /////////////////////////////////////////////////////////////////////////////
@@ -121,10 +151,13 @@ void lcd6100_io::fill_screen(LCD6100_COLOUR colour)
   set_drawing_limits(0, 0,
 		     LCD6100_ROW_MAX_ADDR, LCD6100_COL_MAX_ADDR);
 
+  const unsigned tot_nr_pixels = 
+    (LCD6100_ROW_MAX_ADDR + 1) * (LCD6100_COL_MAX_ADDR + 1);
+
   // Fill screen using specified RGB colour value
   // Two pixels = 2 * 12bit = 24bit = 3 bytes
   write_command(CMD_RAMWR);
-  for (unsigned i=0; i < ((LCD6100_ROW_MAX_ADDR * LCD6100_COL_MAX_ADDR) / 2); i++) {
+  for (unsigned i=0; i < (tot_nr_pixels / 2); i++) {
     write_data( (colour.wd >> 4) & 0xFF );
     write_data( ((colour.wd & 0x0F) << 4) | ((colour.wd >> 8) & 0x0F) );
     write_data( colour.wd & 0xFF );
@@ -238,6 +271,88 @@ void lcd6100_io::draw_rectangle(uint8_t start_row,
 
 /////////////////////////////////////////////////////////////////////////////
 
+void lcd6100_io::draw_bmp_image(uint8_t row,
+				uint8_t col,
+				string bmp_image,
+				bool scale)
+{
+  lcd6100_bmp *bmp = new lcd6100_bmp(bmp_image);
+
+  try {
+    // Parse image
+    bmp->parse(scale);
+
+    // Check that image will fit on screen
+    // Assumes start row and col already checked by caller
+    uint8_t end_row = row + bmp->get_height() - 1;
+    uint8_t end_col = col + bmp->get_width() - 1;
+    
+    if ( (end_row > LCD6100_ROW_MAX_ADDR) ||
+	 (end_col > LCD6100_COL_MAX_ADDR) ) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_BAD_ARGUMENT,
+		"End row(%u), max(%u). End col(%u), max(%u)",
+		end_row, LCD6100_ROW_MAX_ADDR,
+		end_col, LCD6100_COL_MAX_ADDR);
+    }
+
+    // Drawing area is entire image
+    set_drawing_limits(row, col,
+		       end_row, end_col);
+
+    // BMP image pixel row
+    unsigned bmp_j = bmp->get_height();
+
+    // Work through all pixels, row by row, from the bottom and up
+    write_command(CMD_RAMWR);
+    for (unsigned bmp_row=0; bmp_row < bmp->get_height(); bmp_row++) {
+
+      bmp_j--; // Decrement BMP image row
+
+      // Work on each pixel in the row (left to right)
+      // Note! We do two pixels each loop
+      for (unsigned bmp_col=0; bmp_col < bmp->get_width(); bmp_col+=2) {
+      
+	LCD6100_COLOUR colour_0;  // First pixel
+	LCD6100_COLOUR colour_1;  // Second pixel
+
+	// Get first pixel
+	colour_0 = bmp->get_pixel(bmp_col, bmp_j);
+
+	// Check if second pixel is on current row
+	if ( (bmp_col + 1) < bmp->get_width() ) {
+
+	  // Get second pixel
+	  colour_1 = bmp->get_pixel(bmp_col + 1, bmp_j);
+
+	  // Fill pixels using specified RGB colour value
+	  // Two pixels = 2 * 12bit = 24bit = 3 bytes
+	  write_data( (colour_0.wd >> 4) & 0xFF );
+	  write_data( ((colour_0.wd & 0x0F) << 4) | ((colour_1.wd >> 8) & 0x0F) );
+	  write_data( colour_1.wd & 0xFF );
+
+	}
+	else {
+	  // Second pixel is NOT on current row
+	  // Write one pixel only
+	  // Two pixels = 2 * 12bit = 24bit = 3 bytes
+	  // Last pixel will be terminated by NOP
+	  write_data( (colour_0.wd >> 4) & 0xFF );
+	  write_data( ((colour_0.wd & 0x0F) << 4) | 0x00 );
+	  write_command(CMD_NOP);
+	}
+      }
+    }
+
+    delete bmp; 
+  }
+  catch (...) {
+    delete bmp;
+    throw;
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
 void lcd6100_io::write_char(char c,
 			    uint8_t row,
 			    uint8_t col,			   
@@ -259,18 +374,10 @@ void lcd6100_io::write_char(char c,
   }
   
   // Check that character will fit on screen
-  uint8_t start_row = row;
-  uint8_t start_col = col;
+  // Assumes start row and col already checked by caller
   uint8_t end_row = row + lcd_font->get_height() - 1;
   uint8_t end_col = col + lcd_font->get_width() - 1;
-  
-  if ( (start_row > LCD6100_ROW_MAX_ADDR) ||
-       (start_col > LCD6100_COL_MAX_ADDR) ) {
-    THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_BAD_ARGUMENT,
-		"Start row(%u), max(%u). start col(%u), max(%u)",
-		start_row, LCD6100_ROW_MAX_ADDR,
-		start_col, LCD6100_COL_MAX_ADDR);
-  }
+
   if ( (end_row > LCD6100_ROW_MAX_ADDR) ||
        (end_col > LCD6100_COL_MAX_ADDR) ) {
     THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_BAD_ARGUMENT,
@@ -280,7 +387,7 @@ void lcd6100_io::write_char(char c,
   }
 
   // Drawing area is entire character
-  set_drawing_limits(start_row, start_col,
+  set_drawing_limits(row, col,
 		     end_row, end_col);
 
   // Point to last font data byte in character (last row of pixels)
@@ -288,18 +395,19 @@ void lcd6100_io::write_char(char c,
 
   // Work through all pixels, row by row, from the bottom and up
   write_command(CMD_RAMWR);
-  for (int row=0; row < lcd_font->get_height(); row++) {
+  for (int font_row=0; font_row < lcd_font->get_height(); font_row++) {
 
     // Get pixel row from font table and then decrement row
     uint8_t pixel_row = *char_data--;
+
+    uint8_t pixel_mask = 0x80;
     
     // Work on each pixel in the row (left to right)
-    // Note!
-    // We do two pixels each loop
-    uint8_t pixel_mask = 0x80;
-    uint16_t pixel_0_wd;
-    uint16_t pixel_1_wd;
-    for (int col=0; col < lcd_font->get_width(); col+=2) {
+    // Note! We do two pixels each loop
+    for (int font_col=0; font_col < lcd_font->get_width(); font_col+=2) {
+       
+       uint16_t pixel_0_wd;
+       uint16_t pixel_1_wd;
       
       // Get RGB coulor value for each pixel
       if (pixel_row & pixel_mask) {

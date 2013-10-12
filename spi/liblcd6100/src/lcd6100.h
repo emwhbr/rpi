@@ -35,7 +35,8 @@ extern "C" {
 #define LCD6100_BAD_ARGUMENT                  3
 #define LCD6100_CLOCK_OPERATION_FAILED        4
 #define LCD6100_SPI_LAYER_ERROR               5
-#define LCD6100_UNEXPECTED_EXCEPTION          6
+#define LCD6100_BMP_IMAGE_ERROR               6
+#define LCD6100_UNEXPECTED_EXCEPTION          7
 
 /*
  * Error source values
@@ -187,6 +188,20 @@ extern long lcd6100_finalize(void);
 
 /****************************************************************************
 *
+* Name lcd6100_clear_screen
+*
+* Description Clears the LCD screen.
+*
+* Parameters None
+*
+* Error handling Returns LCD6100_SUCCESS if successful
+*                otherwise LCD6100_FAILURE or LCD6100_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long lcd6100_clear_screen(void);
+
+/****************************************************************************
+*
 * Name lcd6100_fill_screen
 *
 * Description Fills the LCD screen with specified colour.
@@ -262,6 +277,26 @@ extern long lcd6100_draw_rectangle(uint8_t start_row,
 				   uint8_t end_col,
 				   bool filled,
 				   LCD6100_COLOUR colour);
+
+/****************************************************************************
+*
+* Name lcd6100_draw_bmp_image
+*
+* Description Draws a BMP image on LCD.
+*
+* Parameters  row        IN  Start row address
+*             col        IN  Start column address
+*             bmp_image  IN  Path to BMP image
+*             scale      IN  If image shall be scaled to fit or not.
+*
+* Error handling Returns LCD6100_SUCCESS if successful
+*                otherwise LCD6100_FAILURE or LCD6100_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long lcd6100_draw_bmp_image(uint8_t row,
+				   uint8_t col,
+				   const char *bmp_image,
+				   bool scale);
 
 /****************************************************************************
 *

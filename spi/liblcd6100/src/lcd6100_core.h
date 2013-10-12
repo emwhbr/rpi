@@ -14,6 +14,7 @@
 
 #include <pthread.h>
 #include <memory>
+#include <string>
 
 #include "lcd6100.h"
 #include "lcd6100_exception.h"
@@ -49,6 +50,8 @@ public:
 
   long finalize(void);
 
+  long clear_screen(void);
+
   long fill_screen(LCD6100_COLOUR colour);
 
   long draw_pixel(uint8_t row,
@@ -67,6 +70,11 @@ public:
 		      uint8_t end_col,
 		      bool filled,
 		      LCD6100_COLOUR colour);
+
+  long draw_bmp_image(uint8_t row,
+		      uint8_t col,
+		      string bmp_image,
+		      bool scale);
 
   long write_char(char c,
 		  uint8_t row,

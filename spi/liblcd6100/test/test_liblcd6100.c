@@ -54,10 +54,12 @@ static void get_prod_info(void);
 static void get_last_error(void);
 static void initialize(void);
 static void finalize(void);
+static void clear_screen(void);
 static void fill_screen(void);
 static void draw_pixel(void);
 static void draw_line(void);
 static void draw_rectangle(void);
+static void draw_bmp_image(void);
 static void write_character(void);
 static void write_string(void);
 static void test_write_command(void);
@@ -174,6 +176,17 @@ static void finalize(void)
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
   }
+}
+
+/*****************************************************************/
+
+static void clear_screen(void)
+{
+  /* Clear screen */
+  if (lcd6100_clear_screen() != LCD6100_SUCCESS) {
+    printf(TEST_LIBLCD6100_ERROR_MSG);
+    return;
+  }  
 }
 
 /*****************************************************************/
@@ -296,6 +309,42 @@ static void draw_rectangle(void)
 			     end_row, end_col,
 			     filled,
 			     colour) != LCD6100_SUCCESS) {
+    printf(TEST_LIBLCD6100_ERROR_MSG);
+    return;
+  }  
+}
+
+/*****************************************************************/
+
+static void draw_bmp_image(void)
+{  
+  unsigned val;
+  uint8_t row;
+  uint8_t col;
+  char path_to_bmp[100];
+  bool scale;
+
+  /* User input */  
+  printf("Enter row[dec]: ");
+  scanf("%u", &val);
+  row = val;
+
+  printf("Enter column[dec]: ");
+  scanf("%u", &val);
+  col = val;
+
+  printf("Enter path to BMP image: ");
+  scanf(" %[^\n]s", path_to_bmp);
+
+  printf("Scale image to fit LCD[1=Yes, 0=No]: ");
+  scanf("%u", &val);
+  scale = ((val == 1) ? true : false);
+
+  /* Draw BMP image */
+  if (lcd6100_draw_bmp_image(row,
+			     col,
+			     path_to_bmp,
+			     scale) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
   }  
@@ -436,14 +485,16 @@ static void print_menu(void)
   printf("  2. get last error + get error string\n");
   printf("  3. initialize\n");
   printf("  4. finalize\n");
-  printf("  5. fill screen\n");
-  printf("  6. draw pixel\n");
-  printf("  7. draw line\n");
-  printf("  8. draw rectangle\n");
-  printf("  9. write character\n");
-  printf(" 10. write string\n");
-  printf(" 11  (test) write command\n");
-  printf(" 12. (test) write data\n");
+  printf("  5. clear screen\n");
+  printf("  6. fill screen\n");
+  printf("  7. draw pixel\n");
+  printf("  8. draw line\n");
+  printf("  9. draw rectangle\n");
+  printf(" 10. draw BMP image\n");
+  printf(" 11. write character\n");
+  printf(" 12. write string\n");
+  printf(" 13  (test) write command\n");
+  printf(" 14. (test) write data\n");
   printf("100. Exit\n\n");
 }
 
@@ -473,27 +524,33 @@ static void do_test_liblcd6100(void)
       finalize();
       break;
     case 5:
-      fill_screen();
+      clear_screen();
       break;
     case 6:
-      draw_pixel();
+      fill_screen();
       break;
     case 7:
-      draw_line();
+      draw_pixel();
       break;
     case 8:
-      draw_rectangle();
+      draw_line();
       break;
     case 9:
-      write_character();
+      draw_rectangle();
       break;
     case 10:
-      write_string();
+      draw_bmp_image();
       break;
     case 11:
-      test_write_command();
+      write_character();
       break;
     case 12:
+      write_string();
+      break;
+    case 13:
+      test_write_command();
+      break;
+    case 14:
       test_write_data();
       break;
     case 100: /* Exit */
