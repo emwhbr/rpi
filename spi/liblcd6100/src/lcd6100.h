@@ -280,6 +280,26 @@ extern long lcd6100_draw_rectangle(uint8_t start_row,
 
 /****************************************************************************
 *
+* Name lcd6100_draw_circle
+*
+* Description Draws a circle on LCD screen with specified colour.
+*
+* Parameters  row     IN  Row address
+*             col     IN  Column address
+*             radius  IN  Radius of circle (in pixels)
+*             colour  IN  12-bit RGB colour value (rrrrgggbbbb)
+*
+* Error handling Returns LCD6100_SUCCESS if successful
+*                otherwise LCD6100_FAILURE or LCD6100_MUTEX_FAILURE
+*
+****************************************************************************/
+extern long lcd6100_draw_circle(uint8_t row,
+				uint8_t col,
+				uint8_t radius,
+				LCD6100_COLOUR colour);
+
+/****************************************************************************
+*
 * Name lcd6100_draw_bmp_image
 *
 * Description Draws a BMP image on LCD.

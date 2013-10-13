@@ -23,7 +23,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBLCD6100"
-#define RSTATE           "R1A02"
+#define RSTATE           "R1A03"
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
@@ -352,6 +352,51 @@ long lcd6100_core::draw_rectangle(uint8_t start_row,
 				  end_row, end_col,
 				  filled,
 				  colour);
+    return LCD6100_SUCCESS;
+  }
+  catch (lcd6100_exception &lxp) {
+    return set_error(lxp);
+  }
+  catch (...) {
+    return set_error(LXP(LCD6100_INTERNAL_ERROR, LCD6100_UNEXPECTED_EXCEPTION, NULL));
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+long lcd6100_core::draw_circle(uint8_t row,
+			       uint8_t col,
+			       uint8_t radius,
+			       LCD6100_COLOUR colour)
+{
+  try {
+    // Check if not initialized
+    if (!m_initialized) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_NOT_INITIALIZED,
+		"Not initialized");
+    }
+
+    // Check input values
+    int max_row = row + radius;
+    int min_row = row - radius;
+    if ( (max_row > LCD6100_ROW_MAX_ADDR) ||
+	 (min_row < 0) ) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_BAD_ARGUMENT,
+		"Row(%u), radius(%u). Exceeds row limits min(%u), max(%u)",
+		row, radius, 0, LCD6100_ROW_MAX_ADDR);
+    }
+    int max_col = col + radius;
+    int min_col = col - radius;
+    if ( (max_col > LCD6100_COL_MAX_ADDR) ||
+	 (min_col < 0) ) {
+      THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_BAD_ARGUMENT,
+		"Col(%u), radius(%u). Exceeds col limits min(%u), max(%u)",
+		col, radius, 0, LCD6100_COL_MAX_ADDR);
+    }
+
+    // Do the actual work
+    m_lcd_io_auto->draw_circle(row, col, radius, colour);
+
     return LCD6100_SUCCESS;
   }
   catch (lcd6100_exception &lxp) {

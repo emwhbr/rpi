@@ -52,7 +52,7 @@
 //    By defining a drawing box, the memory can be filled by
 //    successive memory writes until all pixels have been written.
 //
-// 5. Line drawing algorithm devloped by Jack Elton Bresenham (1962).
+// 5. Line and circle drawing algorithms devloped by Jack Elton Bresenham (1962).
 //
 
 /////////////////////////////////////////////////////////////////////////////
@@ -266,6 +266,44 @@ void lcd6100_io::draw_rectangle(uint8_t start_row,
 			 end_row,
 			 end_col,
 			 colour);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void lcd6100_io::draw_circle(uint8_t row,
+			     uint8_t col,
+			     uint8_t radius,
+			     LCD6100_COLOUR colour)
+{
+  ////////////////////////////////////////////
+  // BRESENHAAM ALGORITHM FOR CIRCLE DRAWING
+  ///////////////////////////////////////////
+
+  int x = 0;
+  int y = radius;
+  int d = (3 - 2*radius);
+  
+  while (x < y) {
+    
+    x++;
+
+    if (d < 0) {
+      d += (4*x + 6);
+    }
+    else {
+      y--;
+      d += 4*(x-y) + 10;
+    }
+    
+    draw_pixel(row + x, col + y, colour);
+    draw_pixel(row - x, col + y, colour);
+    draw_pixel(row + x, col - y, colour);
+    draw_pixel(row - x, col - y, colour);
+    draw_pixel(row + y, col + x, colour);
+    draw_pixel(row - y, col + x, colour);
+    draw_pixel(row + y, col - x, colour);
+    draw_pixel(row - y, col - x, colour);
   }
 }
 

@@ -104,6 +104,16 @@ long lcd6100_draw_rectangle(uint8_t start_row,
 
 ////////////////////////////////////////////////////////////////
 
+long lcd6100_draw_circle(uint8_t row,
+			 uint8_t col,
+			 uint8_t radius,
+			 LCD6100_COLOUR colour)
+{
+  return g_object.draw_circle(row, col, radius, colour);
+}
+
+////////////////////////////////////////////////////////////////
+
 long lcd6100_draw_bmp_image(uint8_t row,
 			    uint8_t col,
 			    const char *bmp_image,

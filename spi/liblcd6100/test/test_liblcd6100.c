@@ -59,6 +59,7 @@ static void fill_screen(void);
 static void draw_pixel(void);
 static void draw_line(void);
 static void draw_rectangle(void);
+static void draw_circle(void);
 static void draw_bmp_image(void);
 static void write_character(void);
 static void write_string(void);
@@ -186,7 +187,7 @@ static void clear_screen(void)
   if (lcd6100_clear_screen() != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -202,7 +203,7 @@ static void fill_screen(void)
   if (lcd6100_fill_screen(colour) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -231,7 +232,7 @@ static void draw_pixel(void)
 			 colour) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -268,7 +269,7 @@ static void draw_line(void)
 			colour) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -311,7 +312,42 @@ static void draw_rectangle(void)
 			     colour) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
+}
+
+/*****************************************************************/
+
+static void draw_circle(void)
+{
+  unsigned val;
+  LCD6100_COLOUR colour;
+  uint8_t row;
+  uint8_t col;
+  uint8_t radius;
+
+  /* User input */
+  printf("Enter row[dec]: ");
+  scanf("%u", &val);
+  row = val;
+
+  printf("Enter column[dec]: ");
+  scanf("%u", &val);
+  col = val;
+
+  printf("Enter radius[dec]: ");
+  scanf("%u", &val);
+  radius = val;
+
+  colour = get_user_colour();
+
+  /* Draw circle */
+  if (lcd6100_draw_circle(row,
+			  col,
+			  radius,
+			  colour) != LCD6100_SUCCESS) {
+    printf(TEST_LIBLCD6100_ERROR_MSG);
+    return;
+  }
 }
 
 /*****************************************************************/
@@ -347,7 +383,7 @@ static void draw_bmp_image(void)
 			     scale) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -393,7 +429,7 @@ static void write_character(void)
 			 font) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -439,7 +475,7 @@ static void write_string(void)
 			   font) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
-  }  
+  }
 }
 
 /*****************************************************************/
@@ -490,11 +526,12 @@ static void print_menu(void)
   printf("  7. draw pixel\n");
   printf("  8. draw line\n");
   printf("  9. draw rectangle\n");
-  printf(" 10. draw BMP image\n");
-  printf(" 11. write character\n");
-  printf(" 12. write string\n");
-  printf(" 13  (test) write command\n");
-  printf(" 14. (test) write data\n");
+  printf(" 10. draw circle\n");
+  printf(" 11. draw BMP image\n");
+  printf(" 12. write character\n");
+  printf(" 13. write string\n");
+  printf(" 14  (test) write command\n");
+  printf(" 15. (test) write data\n");
   printf("100. Exit\n\n");
 }
 
@@ -539,18 +576,21 @@ static void do_test_liblcd6100(void)
       draw_rectangle();
       break;
     case 10:
-      draw_bmp_image();
+      draw_circle();
       break;
     case 11:
-      write_character();
+      draw_bmp_image();
       break;
     case 12:
-      write_string();
+      write_character();
       break;
     case 13:
-      test_write_command();
+      write_string();
       break;
     case 14:
+      test_write_command();
+      break;
+    case 15:
       test_write_data();
       break;
     case 100: /* Exit */

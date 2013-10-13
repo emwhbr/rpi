@@ -71,6 +71,11 @@ public:
 		      bool filled,
 		      LCD6100_COLOUR colour);
 
+  long draw_circle(uint8_t row,
+		   uint8_t col,
+		   uint8_t radius,
+		   LCD6100_COLOUR colour);
+
   long draw_bmp_image(uint8_t row,
 		      uint8_t col,
 		      string bmp_image,
