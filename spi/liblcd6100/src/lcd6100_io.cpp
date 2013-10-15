@@ -511,12 +511,11 @@ void lcd6100_io::write_command(uint8_t cmd)
 {
   long rc;
   uint16_t lcd_cmd = cmd; // Bit 8 is cleared ==> command
-  uint16_t rx_buf;        // Not used
 
   // Send command to LCD
   rc = raspi_xfer(m_raspi_ce,
 		  (const void *)&lcd_cmd,
-		  (void *)&rx_buf,
+		  NULL,
 		  sizeof(lcd_cmd));
 
   if (rc != RASPI_SUCCESS) {
@@ -537,12 +536,11 @@ void lcd6100_io::write_data(uint8_t data)
 {
   long rc;
   uint16_t lcd_data = data | 0x0100; // Bit 8 is set ==> data
-  uint16_t rx_buf;                   // Not used
 
   // Send data to LCD
   rc = raspi_xfer(m_raspi_ce,
 		  (const void *)&lcd_data,
-		  (void *)&rx_buf,
+		  NULL,
 		  sizeof(lcd_data));
 
   if (rc != RASPI_SUCCESS) {

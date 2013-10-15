@@ -23,7 +23,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBLCD6100"
-#define RSTATE           "R1A03"
+#define RSTATE           "R1A04"
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
