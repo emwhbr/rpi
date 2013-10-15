@@ -25,7 +25,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBRASPI"
-#define RSTATE           "R1A02"
+#define RSTATE           "R1A03"
 
 #define SPI_MASTER_SEM_NAME       "LIBRASPI_MASTER_SEM"
 #define SPI_BUS_PROTECT_SEM_NAME  "LIBRASPI_BUS_PROTECT"
@@ -159,6 +159,12 @@ long raspi_core::initialize(RASPI_CE ce,
 		"Already initialized, ce=%d", ce);
     }
 
+    // Check input values
+    if (!speed) {
+      THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
+		"speed is zero, ce=%d", ce);
+    }
+
     // Do the actual initialization
     internal_initialize(ce, mode, bpw, speed, flags);
 
@@ -230,11 +236,6 @@ long raspi_core::xfer(RASPI_CE ce,
 		"tx_buf is null pointer, ce=%d", ce);
     }
 
-    if (!rx_buf) {
-      THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
-		"rx_buf is null pointer, ce=%d", ce);
-    }
-
     if (!nbytes) {
       THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
 		"nbytes is zero, ce=%d", ce);
@@ -282,11 +283,6 @@ long raspi_core::xfer_n(RASPI_CE ce,
 	THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
 		  "transfer_list[%u].tx_buf is null pointer, ce=%d",
 		  i, ce);
-      }
-      if (!transfer_list[i].rx_buf) {
-	THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,
-		  "transfer_list[%u].rx_buf is null pointer, ce=%d",
-		  i, ce);	
       }
       if (!transfer_list[i].nbytes) {
 	THROW_RXP(RASPI_INTERNAL_ERROR, RASPI_BAD_ARGUMENT,

@@ -199,7 +199,7 @@ static void initialize(void)
       mode = RASPI_MODE_2;
       break;
     case 3:
-      mode = RASPI_MODE_1;
+      mode = RASPI_MODE_3;
       break;
     }
   } while (mode_value > 3);

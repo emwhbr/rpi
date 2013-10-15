@@ -83,7 +83,7 @@ typedef enum {RASPI_MODE_0,
 
 typedef struct {
   void     *tx_buf;     /* Pointer to the send buffer.    	      */
-  void     *rx_buf;     /* Pointer to the receive buffer. 	      */
+  void     *rx_buf;     /* Pointer to the receive buffer (or null).   */
   uint32_t nbytes;      /* Buffer length in bytes.       	      */              
   uint16_t delay_usecs; /* If nonzero, delay after last bit transfer. */
   bool     ce_deactive; /* True to deselect device before starting
@@ -172,7 +172,7 @@ extern long raspi_finalize(RASPI_CE ce);
 *
 * Parameters ce       IN   Identifies the chip select.
 *            *tx_buf  IN   Pointer to the send buffer.
-*            *rx_buf  OUT  Pointer to the receive buffer.
+*            *rx_buf  OUT  Pointer to the receive buffer (or null).
 *            nbytes   IN   Buffer lenght in bytes.
 *
 * Error handling Returns RASPI_SUCCESS if successful
