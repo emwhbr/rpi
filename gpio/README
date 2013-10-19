@@ -1,0 +1,69 @@
+References
+----------
+1. Datasheet "BCM2835 ARM Peripherals" (Broadcom, 2012).
+2. http://elinux.org/RPi_Low-level_peripherals
+3. http://wiringpi.com
+
+Hardware
+--------
+GPIO is one of the peripherals of Broadcom BCM2835.
+The peripherals starts at physical address (PA) 0x2000_0000.
+
+All addresses in datasheet are specified as "bus addresses".
+The "bus address" (BA) for peripherals are mapped at 0x7E00_0000.
+Software that wants to directly access hardware must translate
+these addresses into physical addresses:
+
+       (BA) 0x7E00_0000  <===> (PA) 0x2000_0000
+
+GPIO includes 41 registers and starts at (BA) 0x7E20_0000,
+which translates into (PA) 0x2020_0000.
+
+GPIO header P1
+--------------
+The GPIO header P1 includes 2x13 pins and provides 8 GPIO pins
+(and access to I2C, SPI, UART), as well as +3.3 V, +5 V and GND.
+
+All GPIO pins can be configured to alternate functions like
+I2C, SPI and UART. This also means that these pins can be
+reconfigured back to standard GPIO, if the alternate function
+is no longer required by the application.
+
+The naming convention for a specific pin includes:
+* Connector pin name             (P1-19)
+* BCM2835 data sheet GPIO name   (GPIO10)
+* Alternate function name        (SPI0_MOSI)
+
+Memory mapped GPIO from user space
+-----------------------------------
+GPIO can be accessed from user space by using memory mapped I/O.
+See example code below:
+
+#define BCM2835_PERI_BASE  0x20000000
+#define GPIO_BASE          (BCM2835_PERI_BASE + 0x200000) // GPIO registers
+
+#define PAGE_SIZE  (4*1024)  // Kernel page size
+
+int fd_mem;
+void *gpio_map;
+volatile uint32_t *gpio;
+
+fd_mem = open("/dev/mem", O_RDWR|O_SYNC);
+  
+gpio_map = mmap(NULL,                  // Any adddress in our space will do
+		PAGE_SIZE,             // Map length
+		PROT_READ | PROT_WRITE,// Enable reading & writting to mapped memory
+		MAP_SHARED,            // Shared with other processes
+		fd_mem,                // File to map
+		GPIO_BASE              // Offset to GPIO peripheral registers
+	        );
+  
+close(fd_mem); // No need to keep descriptor open after mmap
+  
+if (gpio_map == MAP_FAILED) {
+  printf("mmap error\n");
+  exit(-1);
+}
+
+// Use volatile pointer
+gpio = (volatile uint32_t *) gpio_map;

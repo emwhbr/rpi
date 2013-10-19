@@ -1,0 +1,31 @@
+C++ class 'gpio' encapsulates functionality for using GPIO pins.
+
+Note! This class is not thread safe and there are no features
+      that protects the GPIO pins from multiple callers.
+      The class only includes the basic functions for GPIO,
+      and the error handling is very basic.
+
+Files:
+------
+build.sh		Build script for this project
+Makefile	      	Makefile for this project
+
+build_clean.sh		Wrapper script for clean build
+build_dbg.sh		Wrapper script for debug build
+build_rel.sh		Wrapper script for release build
+
+obj/			Directory for the result of the build
+
+src/
+  gpio.h		Implements the
+  gpio.cpp		C++ class 'gpio'
+
+  timer.h               Implements the
+  timer.cpp             C++ class 'timer'
+
+  test_gpio.cpp		Test application
+
+README			This file
+
+Example output from test application (test_gpio.cpp):
+-----------------------------------------------------
