@@ -29,3 +29,61 @@ README			This file
 
 Example output from test application (test_gpio.cpp):
 -----------------------------------------------------
+---------------------------------
+------ GPIO TEST MENU -----------
+---------------------------------
+
+  1. initialize
+  2. finalize
+  3. set function
+  4. get function
+  5. write
+  6. read
+  7. toggle
+100. Exit
+
+Enter choice : 1
+---------------------------------
+------ GPIO TEST MENU -----------
+---------------------------------
+
+  1. initialize
+  2. finalize
+  3. set function
+  4. get function
+  5. write
+  6. read
+  7. toggle
+100. Exit
+
+Enter choice : 4
+Enter GPIO pin[0..54]: 8
+Pin:8 is ALTERNATE FUNCTION 0
+---------------------------------
+------ GPIO TEST MENU -----------
+---------------------------------
+
+  1. initialize
+  2. finalize
+  3. set function
+  4. get function
+  5. write
+  6. read
+  7. toggle
+100. Exit
+
+Enter choice : 7
+Enter GPIO pin[0..54]: 8 
+Enter times to toggle[dec]: 1000
+Enter toggle delay time[usec]: 0
+
+Benchmarking "toggle" using different delay times:
+Times were measured using Saleae USB Logic Analyzer@24MHz:
+----------------------------------------------------------
+
+Times	delay(us)    Tot(ms)  F(kHz)   Peri(us)	High	 Low
+---------------------------------------------------------------
+1000       0        4.22     250.00    4.000    2.125    1.875
+1000       2   	    7.50     121.21    8.250    4.250    4.000
+1000       5  	   14.17      76.19   13.125    7.000    6.125
+1000      10  	   24.26      44.94   22.250   10.292   11.958 

@@ -263,19 +263,19 @@ static void toggle(void)
   g_gpio->write(pin, 1);
 
   // Toggle
+  timer t;
+  double t_next;
   for (unsigned i=0; i < nr_toggles; i++) {
 
-    timer t;
+    // Low
+    t_next = t.get_elapsed_time() + (usec_delay / 1000000.0);
+    g_gpio->write(pin, 0);
+    while (t.get_elapsed_time() <= t_next) ;
 
     // High
-    g_gpio->write(pin, 0);
-    t.reset();
-    while (t.get_elapsed_time() < (usec_delay / 1000000.0)) ;
-
-    // Low
+    t_next = t.get_elapsed_time() + (usec_delay / 1000000.0);
     g_gpio->write(pin, 1);
-    t.reset();
-    while (t.get_elapsed_time() < (usec_delay / 1000000.0)) ;
+    while (t.get_elapsed_time() <= t_next) ;
   }
 
   // End high
