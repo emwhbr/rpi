@@ -31,13 +31,13 @@
 MODULE_DESCRIPTION("BCM2835 SPI bitbang driver for Philips PCF8833");
 MODULE_AUTHOR("Bonden i Nol <hakanbrolin@hotmail.com>");
 MODULE_LICENSE("GPL v2");
-MODULE_VERSION("R1A01");
+MODULE_VERSION("R1A02");
 
 /*
  * Runtime debug messages on/off
  */
 #define DEBUG_PRINTS
-/*#undef DEBUG_PRINTS*/
+#undef DEBUG_PRINTS
 #ifdef DEBUG_PRINTS
 #define debug_print(fmt, args...) spi_pcf8833_debug(fmt, ##args);
 #else
@@ -256,7 +256,37 @@ static int bcm2835_gpio_set_func(u8 pin, u8 func)
 
 /****************************************************************************
 *
-* Name bcm2835_gpio_init_pins
+* Name bcm2835_gpio_init_pin_val
+*
+* Description Set the inital value of the GPIO pins.
+*
+* Parameters *dev  (IN/OUT)  Pointer to the device
+*
+* Error handling None
+*
+****************************************************************************/
+static void bcm2835_gpio_init_pin_val(struct spi_pcf8833_dev *dev)
+{
+  /* Set initial value for each pin */
+  if (dev->spi_gpio.ce.init_val)
+    bcm2835_gpio_set_hi(dev->spi_gpio.ce.pin);
+  else
+    bcm2835_gpio_set_lo(dev->spi_gpio.ce.pin);
+  
+  if (dev->spi_gpio.clk.init_val)
+    bcm2835_gpio_set_hi(dev->spi_gpio.clk.pin);
+  else
+    bcm2835_gpio_set_lo(dev->spi_gpio.clk.pin);
+
+  if (dev->spi_gpio.mosi.init_val)
+    bcm2835_gpio_set_hi(dev->spi_gpio.mosi.pin);
+  else
+    bcm2835_gpio_set_lo(dev->spi_gpio.mosi.pin);
+}
+
+/****************************************************************************
+*
+* Name bcm2835_gpio_init_pin_func
 *
 * Description Defines the default operation of the GPIO pins.
 *
@@ -265,7 +295,7 @@ static int bcm2835_gpio_set_func(u8 pin, u8 func)
 * Error handling Returns 0 on success, otherwise a kernel error code.
 *
 ****************************************************************************/
-static int bcm2835_gpio_init_pins(struct spi_pcf8833_dev *dev)
+static int bcm2835_gpio_init_pin_func(struct spi_pcf8833_dev *dev)
 {
   int rc;
 
@@ -309,22 +339,6 @@ static int bcm2835_gpio_init_pins(struct spi_pcf8833_dev *dev)
 			     dev->spi_gpio.mosi.func);
   if (rc) return rc;
   dev->spi_gpio.mosi.defined = true;
-
-  /* Set initial value for each pin */
-  if (dev->spi_gpio.ce.init_val)
-    bcm2835_gpio_set_hi(dev->spi_gpio.ce.pin);
-  else
-    bcm2835_gpio_set_lo(dev->spi_gpio.ce.pin);
-  
-  if (dev->spi_gpio.clk.init_val)
-    bcm2835_gpio_set_hi(dev->spi_gpio.clk.pin);
-  else
-    bcm2835_gpio_set_lo(dev->spi_gpio.clk.pin);
-
-  if (dev->spi_gpio.mosi.init_val)
-    bcm2835_gpio_set_hi(dev->spi_gpio.mosi.pin);
-  else
-    bcm2835_gpio_set_lo(dev->spi_gpio.mosi.pin);  
 
   return 0;
 }
@@ -448,12 +462,12 @@ static ssize_t spi_pcf8833_xfer(struct spi_pcf8833_dev *dev,
   int i;
   u16 bitmask = 0x0100;
 
-  /* CLK - start low */
-  bcm2835_gpio_set_lo(dev->spi_gpio.clk.pin);
-  udelay(1);
+   /* MOSI - Start low */
+  bcm2835_gpio_set_lo(dev->spi_gpio.mosi.pin);
 
   /* Activate PCF8833 */
   bcm2835_gpio_set_lo(dev->spi_gpio.ce.pin);
+  udelay(1);
 
   /* Transfer 9 bits, MSb first */
   for (i=0; i < 9; i++) {
@@ -521,6 +535,9 @@ static int spi_pcf8833_open(struct inode *node,
   if ( down_trylock(&dev->dev_sem) ) {
     return -EBUSY;
   }
+
+  /* Set the inital value of the GPIO pins */
+  bcm2835_gpio_init_pin_val(dev);
 
   return 0;
 }
@@ -650,10 +667,12 @@ static int __init spi_pcf8833_init(void)
 	   &g_spi_gpio_init[i],
 	   sizeof(struct spi_gpio));
 
-    rc = bcm2835_gpio_init_pins(&g_spi_pcf8833_dev[i]);
+    rc = bcm2835_gpio_init_pin_func(&g_spi_pcf8833_dev[i]);
     if (rc) {
       goto spi_pcf8833_init_failed;
     }
+
+    bcm2835_gpio_init_pin_val(&g_spi_pcf8833_dev[i]);
     
     /* Initialize cdev */
     rc = spi_pcf8833_setup_cdev(&g_spi_pcf8833_dev[i]);
