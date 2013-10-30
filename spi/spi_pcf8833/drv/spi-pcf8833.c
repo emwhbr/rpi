@@ -31,7 +31,7 @@
 MODULE_DESCRIPTION("BCM2835 SPI bitbang driver for Philips PCF8833");
 MODULE_AUTHOR("Bonden i Nol <hakanbrolin@hotmail.com>");
 MODULE_LICENSE("GPL v2");
-MODULE_VERSION("R1A02");
+MODULE_VERSION("R1A03");
 
 /*
  * Runtime debug messages on/off
@@ -42,6 +42,20 @@ MODULE_VERSION("R1A02");
 #define debug_print(fmt, args...) spi_pcf8833_debug(fmt, ##args);
 #else
 #define debug_print(fmt, args...)
+#endif
+
+/*
+ * Use CP15 Cycle Counter Register as timebase when
+ * generating SPI-clk signal
+ */
+#define USE_CP15_CCR
+/*#undef USE_CP15_CCR*/
+#ifdef USE_CP15_CCR
+#define spi_ce_delay  bcm2708_cp15_busy_wait_ccr(700)
+#define spi_clk_delay bcm2708_cp15_busy_wait_ccr(400)
+#else
+#define spi_ce_delay  udelay(1)
+#define spi_clk_delay udelay(1)
 #endif
 
 /*
@@ -154,6 +168,92 @@ static void spi_pcf8833_debug(char *fmt,...)
   printk(KERN_NOTICE DRV_NAME": %s", buf);
 }
 #endif
+
+/*****************************************************************/
+
+static inline void bcm2708_cp15_enable_ccr(void)
+{
+  u32 pmcr;
+
+  /* Read Performance Monitor Control Register */
+  asm volatile ("mrc p15, 0, %0, c15, c12, 0" : "=r" (pmcr));
+
+  /* 
+   * Enable all counters, E-bit[0]=1 
+   * Count every cycle,   D-bit[3]=0
+   */
+  pmcr |= 0x1;
+  pmcr &= ~0x8;
+
+  /* Write Performance Monitor Control Register */
+  asm volatile ("mcr p15, 0, %0, c15, c12, 0" : : "r" (pmcr));
+}
+
+/*****************************************************************/
+
+static inline void bcm2708_cp15_disable_ccr(void)
+{
+  u32 pmcr;
+
+  /* Read Performance Monitor Control Register */
+  asm volatile ("mrc p15, 0, %0, c15, c12, 0" : "=r" (pmcr));
+
+  /*  Disable all counters, E-bit[0]=0 */
+  pmcr &= ~0x1;
+
+  /* Write Performance Monitor Control Register */
+  asm volatile ("mcr p15, 0, %0, c15, c12, 0" : : "r" (pmcr));
+}
+
+/*****************************************************************/
+
+static inline u32 bcm2708_cp15_read_ccr(void)
+{
+  u32 ccr;
+
+  /* Read cycle counter register */
+  asm volatile ("mrc p15, 0, %0, c15, c12, 1" : "=r" (ccr));
+
+  return ccr;
+}
+
+/*****************************************************************/
+
+static inline void bcm2708_cp15_write_ccr(u32 ccr)
+{
+  /* Write cycle counter register */
+  asm volatile ("mcr p15, 0, %0, c15, c12, 1" : : "r" (ccr));
+}
+
+/*****************************************************************/
+
+static void bcm2708_cp15_busy_wait_ccr(u32 cycle)
+{
+  u32 ccr;
+
+  /* 
+   * Register usage:
+   *  r0 : Argument 1, 'cycle' (Procedure Call Standard for the ARM Architecture)
+   *  r2 : Current value of cycle counter register (CCR)
+   */
+
+  /* Reset CCR */
+  asm volatile ("mcr p15, 0, %0, c15, c12, 1" : : "r" (0));
+
+  /* Busy wait until CCR >= cycles */
+ continue_read_ccr:
+  asm volatile ("mrc p15, 0, %0, c15, c12, 1" : "=r" (ccr));
+  if (ccr < cycle) {
+    goto continue_read_ccr;
+  }
+
+  /*
+  asm volatile ("continue_read_ccr:\n\t"
+		"mrc p15, 0, r2, c15, c12, 1\n\t"
+		"cmp r2, r0\n\t"
+		"blt continue_read_ccr");
+  */
+}
 
 /*****************************************************************/
 
@@ -467,13 +567,13 @@ static ssize_t spi_pcf8833_xfer(struct spi_pcf8833_dev *dev,
 
   /* Activate PCF8833 */
   bcm2835_gpio_set_lo(dev->spi_gpio.ce.pin);
-  udelay(1);
+  spi_ce_delay;
 
   /* Transfer 9 bits, MSb first */
   for (i=0; i < 9; i++) {
     /* CLK - low */
     bcm2835_gpio_set_lo(dev->spi_gpio.clk.pin);
-    udelay(1);
+    spi_clk_delay;
 
     /* MOSI */
     if ( bitmask & message ) {
@@ -486,7 +586,7 @@ static ssize_t spi_pcf8833_xfer(struct spi_pcf8833_dev *dev,
 
     /* CLK - high */
     bcm2835_gpio_set_hi(dev->spi_gpio.clk.pin);
-    udelay(1);
+    spi_clk_delay;
   }
 
   /* CLK - Final pulse low */
@@ -654,6 +754,10 @@ static int __init spi_pcf8833_init(void)
     goto spi_pcf8833_init_failed;
   }
 
+#ifdef USE_CP15_CCR
+  bcm2708_cp15_enable_ccr(); /* Enable CP15 Cycle Counter Register */
+#endif
+
   /* Common initialization for all devices */
   for (i=0; i < NR_DEVICES; i++) {
     g_spi_pcf8833_dev[i].minor = g_minor + i;
@@ -720,6 +824,10 @@ static void __exit spi_pcf8833_exit(void)
     /* Free memory allocated for the devices */
     kfree(g_spi_pcf8833_dev);
   }
+
+#ifdef USE_CP15_CCR
+  bcm2708_cp15_disable_ccr(); /* Disable CP15 Cycle Counter Register */
+#endif
 
   /* Free I/O memory region for GPIO */
   if (g_vaddr_gpio) {
