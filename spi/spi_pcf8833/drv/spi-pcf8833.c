@@ -6,6 +6,10 @@
  *                                                                      *
  * This driver implements bitbanging SPI by using BCM2835 GPIO.         *
  *                                                                      *
+ * References:                                                          *
+ * [1] ARM1176JZF-S, Technical Reference Manual, Revision:r0p7          *
+ * [2] Datasheet "BCM2835 ARM Peripherals" (Broadcom, 2012)             *
+ *                                                                      *
  * This program is free software; you can redistribute it and/or modify *
  * it under the terms of the GNU General Public License as published by *
  * the Free Software Foundation; either version 2 of the License, or    *
@@ -28,10 +32,37 @@
 
 #include "bcm2835.h"
 
+/*
+ * Implementation notes
+ * 1. PCF8833 is using SPI clock mode 3 (CPOL=1, CPHA=1)
+ *
+ * 2. The high resolution timer used by udelay() requires one microsecond
+ *   to be read. The actual resolution is one microsecond. This means that
+ *   the minimum delay time will be 1 us (udelay(0)) or 2 us (udelay(1)).
+ *
+ * 3. The system control coprocessor (CP15) includes the CPU cycle count
+ *    register, CCR. This register is controlled by the performance monitor
+ *    control register, PMCR.
+ *
+ * 4. This driver assumes Raspberry Pi CPU is running at 700 MHz.
+ *    One CPU cycle is then approx. 1.43 ns.
+ *
+ * 5. Macro 'spi_ce_delay' is used to get an initial delay after
+ *    activating PCF8833 when starting a 9-bit transfer.
+ *    Theoretical value: 350 cycles => 0.5 us
+ *    Real value (measured with Saleae USB Logic analyzer): 0.5625 us
+ *
+ * 6. Macro 'spi_clk_delay' is used to generate the CLK during a
+ *    9-bit transfer. This macro is either using usleep() or a busy wait
+ *    on cycle count register, CCR.
+ *    Theoretical value: 35 cycles (x2) => 0.1 us (10 MHz)
+ *     Real value (measured with Saleae USB Logic analyzer): 0.25 us (4 MHz)
+ */
+
 MODULE_DESCRIPTION("BCM2835 SPI bitbang driver for Philips PCF8833");
 MODULE_AUTHOR("Bonden i Nol <hakanbrolin@hotmail.com>");
 MODULE_LICENSE("GPL v2");
-MODULE_VERSION("R1A03");
+MODULE_VERSION("R1A04");
 
 /*
  * Runtime debug messages on/off
@@ -51,8 +82,8 @@ MODULE_VERSION("R1A03");
 #define USE_CP15_CCR
 /*#undef USE_CP15_CCR*/
 #ifdef USE_CP15_CCR
-#define spi_ce_delay  bcm2708_cp15_busy_wait_ccr(700)
-#define spi_clk_delay bcm2708_cp15_busy_wait_ccr(400)
+#define spi_ce_delay  bcm2708_cp15_busy_wait_ccr(350) /* See implementation notes */
+#define spi_clk_delay bcm2708_cp15_busy_wait_ccr(35)  /* See implementation notes */
 #else
 #define spi_ce_delay  udelay(1)
 #define spi_clk_delay udelay(1)
@@ -561,6 +592,8 @@ static ssize_t spi_pcf8833_xfer(struct spi_pcf8833_dev *dev,
 {
   int i;
   u16 bitmask = 0x0100;
+
+  /* PCF8833 is using SPI clock mode 3 (CPOL=1, CPHA=1) */
 
    /* MOSI - Start low */
   bcm2835_gpio_set_lo(dev->spi_gpio.mosi.pin);
