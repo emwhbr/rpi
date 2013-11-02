@@ -9,7 +9,6 @@
 // *                                                                      *
 // ************************************************************************
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "lcd6100_io.h"
@@ -65,20 +64,8 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-lcd6100_io::lcd6100_io(LCD6100_CE ce,
-		       uint32_t speed)
+lcd6100_io::lcd6100_io(void)
 {
-  switch (ce) {
-  case LCD6100_CE_0:
-    m_raspi_ce = RASPI_CE_0;
-    break;
-  case LCD6100_CE_1:
-    m_raspi_ce = RASPI_CE_1;
-    break;
-  }
-
-  m_raspi_speed = speed;
-
   init_members();
  }
 
@@ -92,53 +79,20 @@ lcd6100_io::~lcd6100_io(void)
 
 void lcd6100_io::initialize(void)
 {
-  long rc;
-
-  // Initialize SPI layer
-  rc = raspi_initialize(m_raspi_ce,
-			RASPI_MODE_3,
-			RASPI_BPW_9,
-			m_raspi_speed,
-			0);
-
-  if (rc != RASPI_SUCCESS) {
-
-    RASPI_ERROR_STRING error_string;
-    get_spi_layer_error(error_string);
-
-    // Throw new error
-    THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
-	      "Failed to initialize SPI, SPI layer info: %s",
-	      error_string);
-  }
-
-  // Initialize LCD controller
-  init_lcd_controller();
+  spi_initialize();      // Initialize SPI layer
+  init_lcd_controller(); // Initialize LCD controller
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 void lcd6100_io::finalize(void)
 {
-  long rc;
-
   // Finalize LCD controller
   write_command(CMD_DISPOFF);
   write_command(CMD_SLEEPIN);
 
   // Finalize SPI layer
-  rc = raspi_finalize(m_raspi_ce);
-
-  if (rc != RASPI_SUCCESS) {
-
-    RASPI_ERROR_STRING error_string;
-    get_spi_layer_error(error_string);
-
-    // Throw new error
-    THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
-	      "Failed to finalize SPI, SPI layer info: %s",
-	      error_string);
-  }
+  spi_finalize();
 
   init_members();
 }
@@ -509,50 +463,18 @@ void lcd6100_io::write_string(const char *str,
 
 void lcd6100_io::write_command(uint8_t cmd)
 {
-  long rc;
   uint16_t lcd_cmd = cmd; // Bit 8 is cleared ==> command
 
-  // Send command to LCD
-  rc = raspi_xfer(m_raspi_ce,
-		  (const void *)&lcd_cmd,
-		  NULL,
-		  sizeof(lcd_cmd));
-
-  if (rc != RASPI_SUCCESS) {
-
-    RASPI_ERROR_STRING error_string;
-    get_spi_layer_error(error_string);
-
-    // Throw new error
-    THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
-	      "Failed to write command(0x%02x), SPI layer info: %s",
-	      cmd, error_string);
-  }
+  spi_write(&lcd_cmd);    // Send command to LCD
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 void lcd6100_io::write_data(uint8_t data)
 {
-  long rc;
   uint16_t lcd_data = data | 0x0100; // Bit 8 is set ==> data
 
-  // Send data to LCD
-  rc = raspi_xfer(m_raspi_ce,
-		  (const void *)&lcd_data,
-		  NULL,
-		  sizeof(lcd_data));
-
-  if (rc != RASPI_SUCCESS) {
-
-    RASPI_ERROR_STRING error_string;
-    get_spi_layer_error(error_string);
-
-    // Throw new error
-    THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
-	      "Failed to write data(0x%02x), SPI layer info: %s",
-	      data, error_string);
-  }
+  spi_write(&lcd_data);              // Send command to LCD
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -563,17 +485,6 @@ void lcd6100_io::write_data(uint8_t data)
 
 void lcd6100_io::init_members(void)
 {
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-void lcd6100_io::get_spi_layer_error(RASPI_ERROR_STRING error_string)
-{
-  RASPI_STATUS status;
-
-  // Get / clear RASPI error information
-  raspi_get_last_error(&status);
-  raspi_get_error_string(status.error_code, error_string);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -675,7 +586,6 @@ void lcd6100_io::draw_empty_rectangle(uint8_t start_row,
   draw_line(start_row, end_col,   start_row, start_col, colour);
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 
 lcd6100_font* lcd6100_io::get_font(LCD6100_FONT font)
@@ -700,4 +610,3 @@ lcd6100_font* lcd6100_io::get_font(LCD6100_FONT font)
 
   return lcd_font;
 }
-

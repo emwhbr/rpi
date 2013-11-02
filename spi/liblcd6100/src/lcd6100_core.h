@@ -45,7 +45,8 @@ public:
   long get_error_string(long error_code,
 			LCD6100_ERROR_STRING error_string);
 
-  long initialize(LCD6100_CE ce,
+  long initialize(LCD6100_IFACE iface,
+		  LCD6100_CE ce,
 		  uint32_t speed);
 
   long finalize(void);
@@ -112,7 +113,9 @@ private:
   bool             m_initialized;
   pthread_mutex_t  m_init_mutex;
 
-  // LCD i/o object
+  // LCD i/o object can be one of the following
+  //  BITBANG     : Implemented by character driver spi-pcf8833
+  //  LINUX_NATIVE: Implemented by libRASPI
   auto_ptr<lcd6100_io> m_lcd_io_auto;
 
   // Private member functions
@@ -124,7 +127,8 @@ private:
 
   long internal_test_get_lib_prod_info(LCD6100_LIB_PROD_INFO *prod_info);
 
-  void internal_initialize(LCD6100_CE ce,
+  void internal_initialize(LCD6100_IFACE iface,
+			   LCD6100_CE ce,
 			   uint32_t speed);
 
   void internal_finalize(void);

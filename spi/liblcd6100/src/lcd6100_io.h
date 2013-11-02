@@ -17,7 +17,6 @@
 #include "lcd6100_font_small.h"
 #include "lcd6100_font_medium.h"
 #include "lcd6100_font_large.h"
-#include "raspi.h"
 
 using namespace std;
 
@@ -28,8 +27,7 @@ using namespace std;
 class lcd6100_io {
 
 public:
-  lcd6100_io(LCD6100_CE ce,
-	     uint32_t speed);
+  lcd6100_io(void);
   ~lcd6100_io(void);
 
   void initialize(void);
@@ -83,18 +81,18 @@ public:
 
   void write_data(uint8_t data);
 
-private:
-  RASPI_CE m_raspi_ce;    // Chip select
-  uint32_t m_raspi_speed; // Bitrate (Hz)
+protected:
+  virtual void spi_initialize(void) =0;
+  virtual void spi_finalize(void) =0;
+  virtual void spi_write(const uint16_t *msg) =0;
 
+private:
   // Font tables
   lcd6100_font_small  m_font_small;
   lcd6100_font_medium m_font_medium;
   lcd6100_font_large  m_font_large;
 
   void init_members(void);
-
-  void get_spi_layer_error(RASPI_ERROR_STRING error_string);
 
   void init_lcd_controller(void);
 

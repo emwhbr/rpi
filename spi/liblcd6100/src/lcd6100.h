@@ -67,9 +67,13 @@ typedef struct {
   long               error_code;
 } LCD6100_STATUS;
 
-/* Chip selects */
+/* SPI chip selects */
 typedef enum {LCD6100_CE_0,
               LCD6100_CE_1} LCD6100_CE;
+
+/* Underlying SPI framework for LCD communication */
+typedef enum {LCD6100_IFACE_BITBANG,
+	      LCD6100_IFACE_LINUX_NATIVE} LCD6100_IFACE;
 
 /* Fonts */
 typedef enum {LCD6100_FONT_SMALL,
@@ -158,18 +162,23 @@ extern long lcd6100_get_error_string(long error_code,
 * Description Allocates system resources and performs operations that are
 *             necessary to be able to communicate with a device using the
 *             SPI interface for specified chip select.
-*             This function shall be called once for each chip select
-*             to make LIBLCD6100 operational for that chip select.
+*
+*             This function shall be called once to make LIBLCD6100
+*             operational for a chip select.
+*
 *             This function can be called again after finalization.
 *
-* Parameters ce     IN  Identifies the chip select.
+* Parameters iface  IN  Identifies the underlying SPI framework/interface.
+*            ce     IN  Identifies the SPI chip select.
 *            speed  IN  Bitrate (Hz).
+*                       Only valid for LCD6100_IFACE_LINUX_NATIVE.
 *
 * Error handling Returns LCD6100_SUCCESS if successful
 *                otherwise LCD6100_FAILURE or LCD6100_MUTEX_FAILURE
 *
 ****************************************************************************/
-extern long lcd6100_initialize(LCD6100_CE ce,
+extern long lcd6100_initialize(LCD6100_IFACE iface,
+			       LCD6100_CE ce,
 			       uint32_t speed);
 
 /****************************************************************************

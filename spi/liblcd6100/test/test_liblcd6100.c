@@ -140,11 +140,26 @@ static void get_last_error(void)
 
 static void initialize(void)
 {
+  unsigned iface_value;
+  LCD6100_IFACE iface = LCD6100_IFACE_BITBANG;
   unsigned ce_value;
   LCD6100_CE ce = LCD6100_CE_0;
   uint32_t speed;
 
   /* User input */
+  do {
+    printf("Enter iface[0=bitbang, 1=linux native]: ");
+    scanf("%u", &iface_value);
+    switch (iface_value) {
+    case 0:
+      iface = LCD6100_IFACE_BITBANG;
+      break;
+    case 1:
+      iface = LCD6100_IFACE_LINUX_NATIVE;
+      break;
+    }
+  } while (iface_value > 1);
+
   do {
     printf("Enter CE[0..1]: ");
     scanf("%u", &ce_value);
@@ -162,7 +177,9 @@ static void initialize(void)
   scanf("%u", &speed);
 
   /* Do initialization */
-  if (lcd6100_initialize(ce, speed) != LCD6100_SUCCESS) {
+  if (lcd6100_initialize(iface,
+			 ce,
+			 speed) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
     return;
   }

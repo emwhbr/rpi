@@ -16,6 +16,8 @@ OBJS = $(OBJ_DIR)/lcd6100.o \
 	$(OBJ_DIR)/lcd6100_exception.o \
 	$(OBJ_DIR)/lcd6100_delay.o \
 	$(OBJ_DIR)/lcd6100_io.o \
+	$(OBJ_DIR)/lcd6100_io_bitbang.o \
+	$(OBJ_DIR)/lcd6100_io_raspi.o \
 	$(OBJ_DIR)/lcd6100_font.o \
 	$(OBJ_DIR)/lcd6100_font_small.o \
 	$(OBJ_DIR)/lcd6100_font_medium.o \
