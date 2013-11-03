@@ -28,7 +28,7 @@ module_name="spi-pcf8833"
 device_name=${module_name}
 
 ################################################################
-function print_usage_and_die()
+print_usage_and_die ()
 ################################################################
 {
     echo "Usage: `basename $0` load <path_to_ko_file>"
@@ -37,7 +37,7 @@ function print_usage_and_die()
 }
 
 ################################################################
-function load_module()
+load_module ()
 ################################################################
 {
     echo "LOAD: $1"
@@ -56,20 +56,24 @@ function load_module()
     fi
 
     # Get major device number for kernel module
-    major=$(awk "\$2==\"${module}\" {print \$1}" /proc/devices)
+    major=$(awk "\$2==\"${module_name}\" {print \$1}" /proc/devices)
+    if [ -z "${major}" ]; then
+	echo "*** ERROR: failed to get major device number for ${module_name}"
+	exit 1
+    fi
 
     echo "LOAD: major device number = $major"
     
     # Remove old device files
-    rm -rf /dev/${device}*
+    rm -rf /dev/${device_name}*
     
     # Create new device files
-    mknod /dev/${device}-0 c ${major} 0
-    mknod /dev/${device}-1 c ${major} 1
+    mknod /dev/${device_name}-0 c ${major} 0
+    mknod /dev/${device_name}-1 c ${major} 1
 }
 
 ################################################################
-function unload_module()
+unload_module ()
 ################################################################
 {
     echo "UNLOAD: ${module_name}"
@@ -82,7 +86,7 @@ function unload_module()
     fi
 
     # Remove device files
-    rm -rf /dev/${device}*
+    rm -rf /dev/${device_name}*
 }
 
 ################################################################

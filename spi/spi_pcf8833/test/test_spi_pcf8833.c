@@ -17,7 +17,7 @@
 /*****************************************************************
  *                  Definition of macros
  *****************************************************************/
-#define SPI_PCF8833_DEV  "/dev/spi_pcf8833-0"
+#define SPI_PCF8833_DEV  "/dev/spi-pcf8833-0"
 
 /* Philips PCF8833 LCD controller commands.
  * Data sheet, 2003 Feb 14 (page 8-11) */
