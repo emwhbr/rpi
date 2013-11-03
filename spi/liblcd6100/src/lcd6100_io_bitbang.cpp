@@ -21,7 +21,7 @@
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of macros
 /////////////////////////////////////////////////////////////////////////////
-#define SPI_PCF8833_DEV  "/dev/spi_pcf8833"
+#define SPI_PCF8833_DEV  "/dev/spi-pcf8833"
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
@@ -65,8 +65,10 @@ void lcd6100_io_bitbang::spi_initialize(void)
 
     int error_num=errno;
     char error_string[256];
-    strerror_r(error_num, error_string, 256);
-    
+    char *err;
+    err = strerror_r(error_num, error_string, 256);
+    strncpy(error_string, err, 256);
+
     // Throw new error
     THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
 	      "Failed to initialize SPI, SPI layer info: %s",
@@ -88,8 +90,10 @@ void lcd6100_io_bitbang::spi_finalize(void)
 
     int error_num=errno;
     char error_string[256];
-    strerror_r(error_num, error_string, 256);
-    
+    char *err;
+    err = strerror_r(error_num, error_string, 256);
+    strncpy(error_string, err, 256);
+
     // Throw new error
     THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
 	      "Failed to finalize SPI, SPI layer info: %s",
@@ -110,7 +114,9 @@ void lcd6100_io_bitbang::spi_write(const uint16_t *msg)
 
     int error_num=errno;
     char error_string[256];
-    strerror_r(error_num, error_string, 256);
+    char *err;
+    err = strerror_r(error_num, error_string, 256);
+    strncpy(error_string, err, 256);
 
     // Throw new error
     THROW_LXP(LCD6100_INTERNAL_ERROR, LCD6100_SPI_LAYER_ERROR,
