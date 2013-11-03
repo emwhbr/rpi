@@ -1,0 +1,10 @@
+Kernel:
+-------
+Raspbian "wheezy" (2013-02-09-wheezy-raspbian.zip)
+
+> uname -a
+Linux raspberrypi 3.6.11+ #371 PREEMPT Thu Feb 7 16:31:35 GMT 2013 armv6l GNU/Linux
+
+Kernel configuration:
+---------------------
+config-raspbian-wheezy-2013_02_09
