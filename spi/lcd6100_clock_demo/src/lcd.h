@@ -50,10 +50,18 @@ class lcd {
 
   void draw_digital_time(void);
 
-  void update_analog_time(uint8_t sec_hand_end_point_row,
-			  uint8_t sec_hand_end_point_col);
+  void reset_digital_time(void);
+
+  uint8_t get_analog_origo_row(void);
+  uint8_t get_analog_origo_col(void);
+  uint8_t get_analog_radius(void);
+
+  void update_analog_time(uint8_t sec_end_row,
+			  uint8_t sec_end_col);
 
   void draw_analog_time(void);
+
+  void reset_analog_time(void);
 
  private:
   string m_rev_info;
@@ -81,8 +89,10 @@ class lcd {
   bool m_dig_sec_updated;
 
   // Keep track of analog time
-  uint8_t m_ana_sec_hand_end_point_row;
-  uint8_t m_ana_sec_hand_end_point_col;
+  uint8_t m_ana_sec_end_row;
+  uint8_t m_ana_sec_end_col;
+  uint8_t m_ana_old_sec_end_row;
+  uint8_t m_ana_old_sec_end_col;
 
   LCD6100_COLOUR m_ana_bg_colour;
   LCD6100_COLOUR m_ana_fg_colour;

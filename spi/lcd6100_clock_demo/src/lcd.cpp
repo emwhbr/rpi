@@ -191,7 +191,7 @@ void lcd::update_digital_time(uint8_t hour,
 
 void lcd::draw_digital_time(void)
 {
-  // Only write time parts that has been updated
+  // Only draw time parts that has been updated
 
   if (m_dig_hour_updated) {
     if (lcd6100_write_string(m_str_dig_hour,
@@ -203,7 +203,7 @@ void lcd::draw_digital_time(void)
 
       throw_lcd6100_exception("Draw digital hour");
     }
-    m_dig_hour_updated = false; // Mark as written
+    m_dig_hour_updated = false; // Mark as drawn
   }
 
   if (m_dig_min_updated) {
@@ -216,7 +216,7 @@ void lcd::draw_digital_time(void)
 
       throw_lcd6100_exception("Draw digital minute");
     }
-    m_dig_min_updated = false; // Mark as written
+    m_dig_min_updated = false; // Mark as draw
   }
 
   if (m_dig_sec_updated) {
@@ -229,22 +229,122 @@ void lcd::draw_digital_time(void)
 
       throw_lcd6100_exception("Draw digital second");
     }
-    m_dig_sec_updated = false; // Mark as written
+    m_dig_sec_updated = false; // Mark as drawn
   }
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
-void lcd::update_analog_time(uint8_t sec_hand_end_point_row,
-			     uint8_t sec_hand_end_point_col)
+void lcd::reset_digital_time(void)
 {
-  m_ana_sec_updated = true;
+  update_digital_time(0, 0, 0);
+  draw_digital_time();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+uint8_t lcd::get_analog_origo_row(void)
+{
+  return ANALOG_ORIGO_ROW;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+uint8_t lcd::get_analog_origo_col(void)
+{
+  return ANALOG_ORIGO_COL;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+uint8_t lcd::get_analog_radius(void)
+{
+  return ANALOG_RADIUS - 3; // We don't want to overwrite clock circle
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void lcd::update_analog_time(uint8_t sec_end_row,
+			     uint8_t sec_end_col)
+{
+  // Only update time parts if necessary
+  
+  if ( (sec_end_row != m_ana_sec_end_row) ||
+       (sec_end_col != m_ana_sec_end_col) ) {
+
+    m_ana_old_sec_end_row = m_ana_sec_end_row;
+    m_ana_old_sec_end_col = m_ana_sec_end_col;
+
+    m_ana_sec_end_row = sec_end_row;
+    m_ana_sec_end_col = sec_end_col;
+
+    m_ana_sec_updated = true; // Mark as updated
+  } 
 }
 
 /////////////////////////////////////////////////////////////////////////////
 
 void lcd::draw_analog_time(void)
 {
+  // Only draw time parts that has been updated
+
+  if (m_ana_sec_updated) {
+
+    // Erase old second
+    if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
+			  ANALOG_ORIGO_COL,
+			  m_ana_old_sec_end_row,
+			  m_ana_old_sec_end_col,
+			  m_ana_bg_colour) != LCD6100_SUCCESS) {
+
+      throw_lcd6100_exception("Erase old analog second");
+    }
+
+    // Draw new second
+    if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
+			  ANALOG_ORIGO_COL,
+			  m_ana_sec_end_row,
+			  m_ana_sec_end_col,
+			  m_ana_fg_colour) != LCD6100_SUCCESS) {
+
+      throw_lcd6100_exception("Draw new analog second");
+    }
+
+    m_ana_sec_updated = false; // Mark as drawn
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void lcd::reset_analog_time(void)
+{
+  // Erase old second
+  if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
+			ANALOG_ORIGO_COL,
+			m_ana_old_sec_end_row,
+			m_ana_old_sec_end_col,
+			m_ana_bg_colour) != LCD6100_SUCCESS) {
+    
+    throw_lcd6100_exception("Erase old analog second");
+  }
+
+  m_ana_sec_end_row = ANALOG_ORIGO_ROW + get_analog_radius();
+  m_ana_sec_end_col = ANALOG_ORIGO_COL;
+
+  m_ana_old_sec_end_row = m_ana_sec_end_row;
+  m_ana_old_sec_end_col = m_ana_sec_end_col;
+
+  // Draw reset second
+  if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
+			ANALOG_ORIGO_COL,
+			m_ana_sec_end_row,
+			m_ana_sec_end_col,
+			m_ana_fg_colour) != LCD6100_SUCCESS) {
+    
+    throw_lcd6100_exception("Draw reset analog second");
+  }
+
+  m_ana_sec_updated = false; // Mark as drawn
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -272,8 +372,11 @@ void lcd::init_members(void)
   m_dig_min_updated  = true;
   m_dig_sec_updated  = true;
 
-  m_ana_sec_hand_end_point_row = ANALOG_ORIGO_ROW + ANALOG_RADIUS - 1;
-  m_ana_sec_hand_end_point_col = ANALOG_ORIGO_COL;
+  m_ana_sec_end_row = ANALOG_ORIGO_ROW + get_analog_radius();
+  m_ana_sec_end_col = ANALOG_ORIGO_COL;
+
+  m_ana_old_sec_end_row = m_ana_sec_end_row;
+  m_ana_old_sec_end_col = m_ana_sec_end_col;
 
   m_ana_bg_colour.wd = ANALOG_BG_COLOUR;
   m_ana_fg_colour.wd = ANALOG_FG_COLOUR;
@@ -333,8 +436,8 @@ void lcd::draw_digital_time_separators(void)
 
 void lcd::draw_analog_time_markers(void)
 {
-  // Time markers: 0, 15, 30, 45 seconds
-  if (lcd6100_write_string("00",
+  // Time markers: 0(60), 15, 30, 45 seconds
+  if (lcd6100_write_string("60",
 			   ANALOG_00S_ROW,
 			   ANALOG_00S_COL,
 			   m_ana_fg_colour,
