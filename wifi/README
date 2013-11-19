@@ -1,0 +1,61 @@
+--------------------------
+-- WIRELESS USB ADAPTER --
+--------------------------
+TP-LINK, Model: TL-WN723N (ver 3.0)
+lsusb --> Bus 001 Device 004: ID 0bda:8179 Realtek Semiconductor Corp.
+
+--------------------
+-- COMPILE DRIVER --
+--------------------
+Raspbian "wheezy" (2013-02-09-wheezy-raspbian.zip) doesn't include
+a kernel driver for this adapter. We need to cross-compile a driver.
+Found useful information (and source code) at:
+http://www.mendrugox.net/2013/08/tp-link-tl-wn725n-v2-working-on-raspberry-raspbian/
+
+tar xvf rtl8188eu.tgz
+source /proj/rpi/ctng/setup_xtool_gcc.sh 
+cd rtl8188eu
+make KSRC=/proj/rpi/kernel/linux-rpi-3.6.y modules
+
+This will generate : 8188eu.ko (transfer to target RPi)
+
+---------------------------
+-- INSTALL DRIVER ON RPi --
+---------------------------
+cp 8188eu.ko /lib/modules/3.6.11+/kernel/drivers/net/wireless/
+depmod -a
+modprobe 8188eu
+
+-------------------------------
+-- CONFIG WIFI USING WPA_CLI --
+-------------------------------
+1. Check that wlan0 exists using ifconfig
+
+2. wpa_cli
+2.1 scan
+2.2 scan_results
+2.3 add_network
+2.4 set_network 0 ssid "Brolin"
+2.5 set_network 0 psk <add your key here, no "" if using hexadecimal>
+2.6 enable_network 0
+2.7 save_config
+
+3. Check saved configuration: /etc/wpa_supplicant/wpa_supplicant.conf
+
+--------------------
+-- CONFIG NETWORK --
+--------------------
+/etc/network/interfaces
+
+       auto lo
+       iface lo inet loopback
+
+       iface eth0 inet dhcp
+
+       # EMWHBR: allow-hotplug didn't work
+       #allow-hotplug wlan0
+       auto wlan0
+       iface wlan0 inet dhcp
+       wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
+
+       iface default inet dhcp
