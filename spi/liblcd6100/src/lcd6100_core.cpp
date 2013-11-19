@@ -25,7 +25,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBLCD6100"
-#define RSTATE           "R1A07"
+#define RSTATE           "R1A08"
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
@@ -694,6 +694,12 @@ long lcd6100_core::internal_get_error_string(long error_code,
     break;
   case LCD6100_BMP_IMAGE_ERROR:
     strncpy(error_string, "BMP image error", str_len);
+    break;
+  case LCD6100_FILE_OPERATION_FAILED:
+    strncpy(error_string, "File operation failed", str_len);
+    break;
+  case LCD6100_MEMORY_MAP_FAILED:
+    strncpy(error_string, "Memory map failed", str_len);
     break;
   case LCD6100_UNEXPECTED_EXCEPTION:
     strncpy(error_string, "Unexpected exception", str_len);

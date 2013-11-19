@@ -36,8 +36,8 @@ extern "C" {
 #define LCD6100_CLOCK_OPERATION_FAILED        4
 #define LCD6100_SPI_LAYER_ERROR               5
 #define LCD6100_BMP_IMAGE_ERROR               6
-#define LCD6100_FILE_OPERATION_FAILED         7 // JOE: Continue here
-#define LCD6100_MEMORY_MAP_FAILED             8 // JOE: Continue here
+#define LCD6100_FILE_OPERATION_FAILED         7
+#define LCD6100_MEMORY_MAP_FAILED             8
 #define LCD6100_UNEXPECTED_EXCEPTION          9
 
 /*
