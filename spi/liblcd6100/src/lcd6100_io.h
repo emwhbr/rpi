@@ -13,6 +13,7 @@
 #define __LCD6100_IO_H__
 
 #include "lcd6100.h"
+#include "lcd6100_gpio.h"
 #include "lcd6100_bmp.h"
 #include "lcd6100_font_small.h"
 #include "lcd6100_font_medium.h"
@@ -27,7 +28,7 @@ using namespace std;
 class lcd6100_io {
 
 public:
-  lcd6100_io(void);
+  lcd6100_io(uint8_t hw_reset_pin);
   ~lcd6100_io(void);
 
   void initialize(void);
@@ -87,6 +88,12 @@ protected:
   virtual void spi_write(const uint16_t *msg) =0;
 
 private:
+  // GPIO
+  uint8_t                m_hw_reset_pin;
+  LCD6100_GPIO_FUNCTION  m_hw_reset_pin_func;
+  uint8_t                m_hw_reset_pin_val;
+  lcd6100_gpio           m_gpio;
+
   // Font tables
   lcd6100_font_small  m_font_small;
   lcd6100_font_medium m_font_medium;
@@ -95,6 +102,8 @@ private:
   void init_members(void);
 
   void init_lcd_controller(void);
+
+  void finalize_lcd_controller(void);
 
   void set_drawing_limits(uint8_t start_row,
 			  uint8_t start_col,

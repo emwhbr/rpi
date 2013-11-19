@@ -29,7 +29,8 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-lcd6100_io_bitbang::lcd6100_io_bitbang(LCD6100_CE ce) : lcd6100_io()
+lcd6100_io_bitbang::lcd6100_io_bitbang(uint8_t hw_reset_pin,
+				       LCD6100_CE ce) : lcd6100_io(hw_reset_pin)
 {
   switch (ce) {
   case LCD6100_CE_0:

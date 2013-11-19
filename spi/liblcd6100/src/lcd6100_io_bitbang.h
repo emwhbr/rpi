@@ -23,7 +23,8 @@ using namespace std;
 class lcd6100_io_bitbang : public lcd6100_io {
 
 public:
-  lcd6100_io_bitbang(LCD6100_CE ce);
+  lcd6100_io_bitbang(uint8_t hw_reset_pin,
+		     LCD6100_CE ce);
   ~lcd6100_io_bitbang(void);
 
 protected:

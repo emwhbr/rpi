@@ -46,6 +46,7 @@ public:
 			LCD6100_ERROR_STRING error_string);
 
   long initialize(LCD6100_IFACE iface,
+		  uint8_t hw_reset_pin,
 		  LCD6100_CE ce,
 		  uint32_t speed);
 
@@ -128,6 +129,7 @@ private:
   long internal_test_get_lib_prod_info(LCD6100_LIB_PROD_INFO *prod_info);
 
   void internal_initialize(LCD6100_IFACE iface,
+			   uint8_t hw_reset_pin,
 			   LCD6100_CE ce,
 			   uint32_t speed);
 

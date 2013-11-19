@@ -39,10 +39,11 @@ long lcd6100_get_error_string(long error_code,
 ////////////////////////////////////////////////////////////////
 
 long lcd6100_initialize(LCD6100_IFACE iface,
+			uint8_t hw_reset_pin,
 			LCD6100_CE ce,
 			uint32_t speed)
 {
-  return g_object.initialize(iface, ce, speed);
+  return g_object.initialize(iface, hw_reset_pin, ce, speed);
 }
 
 ////////////////////////////////////////////////////////////////

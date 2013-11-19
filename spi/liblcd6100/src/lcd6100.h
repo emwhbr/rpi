@@ -36,7 +36,9 @@ extern "C" {
 #define LCD6100_CLOCK_OPERATION_FAILED        4
 #define LCD6100_SPI_LAYER_ERROR               5
 #define LCD6100_BMP_IMAGE_ERROR               6
-#define LCD6100_UNEXPECTED_EXCEPTION          7
+#define LCD6100_FILE_OPERATION_FAILED         7 // JOE: Continue here
+#define LCD6100_MEMORY_MAP_FAILED             8 // JOE: Continue here
+#define LCD6100_UNEXPECTED_EXCEPTION          9
 
 /*
  * Error source values
@@ -168,16 +170,18 @@ extern long lcd6100_get_error_string(long error_code,
 *
 *             This function can be called again after finalization.
 *
-* Parameters iface  IN  Identifies the underlying SPI framework/interface.
-*            ce     IN  Identifies the SPI chip select.
-*            speed  IN  Bitrate (Hz).
-*                       Only valid for LCD6100_IFACE_LINUX_NATIVE.
+* Parameters iface         IN  Underlying SPI framework/interface.
+*            hw_reset_pin  IN  GPIO pin for hardware reset of LCD chip
+*            ce            IN  SPI chip select.
+*            speed         IN  Bitrate (Hz).
+*                              Only valid for LCD6100_IFACE_LINUX_NATIVE.
 *
 * Error handling Returns LCD6100_SUCCESS if successful
 *                otherwise LCD6100_FAILURE or LCD6100_MUTEX_FAILURE
 *
 ****************************************************************************/
 extern long lcd6100_initialize(LCD6100_IFACE iface,
+			       uint8_t hw_reset_pin,
 			       LCD6100_CE ce,
 			       uint32_t speed);
 

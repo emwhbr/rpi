@@ -25,7 +25,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "LIBLCD6100"
-#define RSTATE           "R1A06"
+#define RSTATE           "R1A07"
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
@@ -124,6 +124,7 @@ long lcd6100_core::get_error_string(long error_code,
 /////////////////////////////////////////////////////////////////////////////
 
 long lcd6100_core::initialize(LCD6100_IFACE iface,
+			      uint8_t hw_reset_pin,
 			      LCD6100_CE ce,
 			      uint32_t speed)
 {
@@ -137,7 +138,7 @@ long lcd6100_core::initialize(LCD6100_IFACE iface,
     }
 
     // Do the actual initialization
-    internal_initialize(iface, ce, speed);
+    internal_initialize(iface, hw_reset_pin, ce, speed);
 
     // Initialization completed
     m_initialized = true;
@@ -306,8 +307,8 @@ long lcd6100_core::draw_line(uint8_t start_row,
     
     // Do the actual work
     m_lcd_io_auto->draw_line(start_row, start_col,
-				   end_row, end_col,
-				   colour);
+			     end_row, end_col,
+			     colour);
     return LCD6100_SUCCESS;
   }
   catch (lcd6100_exception &lxp) {
@@ -352,9 +353,9 @@ long lcd6100_core::draw_rectangle(uint8_t start_row,
     
     // Do the actual work
     m_lcd_io_auto->draw_rectangle(start_row, start_col,
-					end_row, end_col,
-					filled,
-					colour);
+				  end_row, end_col,
+				  filled,
+				  colour);
     return LCD6100_SUCCESS;
   }
   catch (lcd6100_exception &lxp) {
@@ -435,8 +436,8 @@ long lcd6100_core::draw_bmp_image(uint8_t row,
 
     // Do the actual work
     m_lcd_io_auto->draw_bmp_image(row, col,
-					bmp_image,
-					scale);
+				  bmp_image,
+				  scale);
 
     return LCD6100_SUCCESS;
   }
@@ -475,9 +476,9 @@ long lcd6100_core::write_char(char c,
 
     // Do the actual work
     m_lcd_io_auto->write_char(c,
-				    row, col,
-				    fg_colour, bg_colour,
-				    font);
+			      row, col,
+			      fg_colour, bg_colour,
+			      font);
 
     return LCD6100_SUCCESS;
   }
@@ -521,9 +522,9 @@ long lcd6100_core::write_string(const char *str,
 
     // Do the actual work
     m_lcd_io_auto->write_string(str,
-				      row, col,
-				      fg_colour, bg_colour,
-				      font);
+				row, col,
+				fg_colour, bg_colour,
+				font);
 
     return LCD6100_SUCCESS;
   }
@@ -724,6 +725,7 @@ long lcd6100_core::internal_test_get_lib_prod_info(LCD6100_LIB_PROD_INFO *prod_i
 /////////////////////////////////////////////////////////////////////////////
 
 void lcd6100_core::internal_initialize(LCD6100_IFACE iface,
+				       uint8_t hw_reset_pin,
 				       LCD6100_CE ce,
 				       uint32_t speed)
 {
@@ -731,10 +733,14 @@ void lcd6100_core::internal_initialize(LCD6100_IFACE iface,
 
   // Create the LCD i/o object with garbage collector
   if (iface == LCD6100_IFACE_BITBANG) {
-    lcd_io_ptr = new lcd6100_io_bitbang(ce); // Speed is not an option
+    lcd_io_ptr = new lcd6100_io_bitbang(hw_reset_pin,
+					ce);          // Speed is not an
+                                                      // option here
   }
   else {
-    lcd_io_ptr = new lcd6100_io_raspi(ce, speed);
+    lcd_io_ptr = new lcd6100_io_raspi(hw_reset_pin,
+				      ce,
+				      speed);
   }
   m_lcd_io_auto = auto_ptr<lcd6100_io>(lcd_io_ptr);
 

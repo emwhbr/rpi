@@ -64,10 +64,12 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-lcd6100_io::lcd6100_io(void)
+lcd6100_io::lcd6100_io(uint8_t hw_reset_pin)
 {
+  m_hw_reset_pin = hw_reset_pin;
+
   init_members();
- }
+}
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -87,12 +89,8 @@ void lcd6100_io::initialize(void)
 
 void lcd6100_io::finalize(void)
 {
-  // Finalize LCD controller
-  write_command(CMD_DISPOFF);
-  write_command(CMD_SLEEPIN);
-
-  // Finalize SPI layer
-  spi_finalize();
+  finalize_lcd_controller(); // Finalize LCD controller
+  spi_finalize();            // Finalize SPI layer
 
   init_members();
 }
@@ -491,12 +489,35 @@ void lcd6100_io::init_members(void)
 
 void lcd6100_io::init_lcd_controller(void)
 {
+  /////////////////////////////
+  // Prepare GPIO for HW reset
+  /////////////////////////////
+
+  m_gpio.initialize();
+  
+  // Save old pin function
+  m_gpio.get_function(m_hw_reset_pin,
+		      m_hw_reset_pin_func);
+
+  // Save old pin value
+  m_gpio.read(m_hw_reset_pin,
+	      m_hw_reset_pin_val);
+
+  // Set pin as output
+  m_gpio.set_function(m_hw_reset_pin,
+		      LCD6100_GPIO_FUNC_OUT);
+
   ////////////////////////////////////////////////
   // Philips PCF8833 LCD controller init sequence
   ////////////////////////////////////////////////
 
-  // Step 1. Reset
-  // JOE: Not yet implemented
+  // Step 1. Hardware reset
+  m_gpio.write(m_hw_reset_pin, 1);
+  delay(0.001);
+  m_gpio.write(m_hw_reset_pin, 0);
+  delay(0.001);
+  m_gpio.write(m_hw_reset_pin, 1);
+  delay(0.001);
 
   // Step 2. Sleep out
   write_command(CMD_SLEEPOUT);
@@ -521,6 +542,24 @@ void lcd6100_io::init_lcd_controller(void)
 
   // Step 8. Turn ON display
   write_command(CMD_DISPON);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void lcd6100_io::finalize_lcd_controller(void)
+{
+  // Shutdown PCF8833 LCD controller
+  write_command(CMD_DISPOFF);
+  write_command(CMD_SLEEPIN);
+
+  // Restore GPIO for HW reset
+  m_gpio.write(m_hw_reset_pin,
+	       m_hw_reset_pin_val);
+
+  m_gpio.set_function(m_hw_reset_pin,
+		      m_hw_reset_pin_func);
+
+  m_gpio.finalize();
 }
 
 /////////////////////////////////////////////////////////////////////////////

@@ -24,7 +24,8 @@ using namespace std;
 class lcd6100_io_raspi : public lcd6100_io {
 
 public:
-  lcd6100_io_raspi(LCD6100_CE ce,
+  lcd6100_io_raspi(uint8_t hw_reset_pin,
+		   LCD6100_CE ce,
 		   uint32_t speed);
   ~lcd6100_io_raspi(void);
 

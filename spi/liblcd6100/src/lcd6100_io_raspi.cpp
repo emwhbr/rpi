@@ -22,8 +22,9 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-lcd6100_io_raspi::lcd6100_io_raspi(LCD6100_CE ce,
-				   uint32_t speed) : lcd6100_io()
+lcd6100_io_raspi::lcd6100_io_raspi(uint8_t hw_reset_pin,
+				   LCD6100_CE ce,
+				   uint32_t speed) : lcd6100_io(hw_reset_pin)
 {
   switch (ce) {
   case LCD6100_CE_0:

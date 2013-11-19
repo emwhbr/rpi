@@ -142,6 +142,8 @@ static void initialize(void)
 {
   unsigned iface_value;
   LCD6100_IFACE iface = LCD6100_IFACE_BITBANG;
+  unsigned hw_reset_pin_value;
+  uint8_t hw_reset_pin;
   unsigned ce_value;
   LCD6100_CE ce = LCD6100_CE_0;
   uint32_t speed;
@@ -159,6 +161,10 @@ static void initialize(void)
       break;
     }
   } while (iface_value > 1);
+
+  printf("Enter hardware reset pin[dec]: ");
+  scanf("%u", &hw_reset_pin_value);
+  hw_reset_pin = (uint8_t)hw_reset_pin_value;
 
   do {
     printf("Enter CE[0..1]: ");
@@ -178,6 +184,7 @@ static void initialize(void)
 
   /* Do initialization */
   if (lcd6100_initialize(iface,
+			 hw_reset_pin,
 			 ce,
 			 speed) != LCD6100_SUCCESS) {
     printf(TEST_LIBLCD6100_ERROR_MSG);
