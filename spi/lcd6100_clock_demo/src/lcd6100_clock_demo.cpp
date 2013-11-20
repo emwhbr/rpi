@@ -32,11 +32,12 @@ using namespace std;
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 
-#define DEMO_REVISION  "R1A02"
+#define DEMO_REVISION  "R1A03"
 
-#define LCD_IFACE  LCD6100_IFACE_BITBANG
-#define LCD_CE     LCD6100_CE_0
-#define LCD_SPEED  0
+#define LCD_IFACE       LCD6100_IFACE_BITBANG
+#define LCD_HW_RES_PIN  23  // Connector P1-16
+#define LCD_CE          LCD6100_CE_0
+#define LCD_SPEED       0   // Not valid for bitbang interface
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of types
@@ -64,6 +65,7 @@ static void *ctrl_thread_func(void *ptr);
 
 // Non-thread function prototypes
 static void lcd6100_clock_demo_terminate(void);
+static void get_prod_info(void);
 static void start_clock(void);
 static void stop_clock(void);
 static void print_menu(void);
@@ -257,6 +259,22 @@ static void lcd6100_clock_demo_terminate(void)
 
 ////////////////////////////////////////////////////////////////
 
+static void get_prod_info(void)
+{
+  cout << "Demo revision      : " << DEMO_REVISION << endl;
+
+  LCD6100_LIB_PROD_INFO lib_prod_info;
+  if (lcd6100_test_get_lib_prod_info(&lib_prod_info) != LCD6100_SUCCESS) {
+    THROW_EXP(0, 0, "lcd6100_test_get_lib_prod_info() failed", NULL);
+    return;
+  }
+
+  cout << "libLCD6100 prod num: " << lib_prod_info.prod_num << endl; 
+  cout << "libLCD6100 rstate  : " << lib_prod_info.rstate << endl;
+}
+
+////////////////////////////////////////////////////////////////
+
 static void start_clock(void)
 {
   int rc;
@@ -354,8 +372,9 @@ static void print_menu(void)
   cout << "------ LCD6100_CLOCK_DEMO MENU -----\n";
   cout << "------------------------------------\n";
   cout << "\n";
-  cout << "  1. Start clock\n";
-  cout << "  2. Stop clock\n";
+  cout << "  1. Get product info\n";
+  cout << "  2. Start clock\n";
+  cout << "  3. Stop clock\n";
   cout << "100. Exit\n\n";
 }
 
@@ -373,9 +392,12 @@ static void clock_demo_menu(void)
     
     switch(value) {
     case 1:
-      start_clock();
+      get_prod_info();
       break;
     case 2:
+      start_clock();
+      break;
+    case 3:
       stop_clock();
       break;
     case 100: // Exit
@@ -439,6 +461,7 @@ int main(int argc, char *argv[])
   try {
     g_lcd = new lcd(DEMO_REVISION,
 		    LCD_IFACE,
+		    LCD_HW_RES_PIN,
 		    LCD_CE,
 		    LCD_SPEED);
 

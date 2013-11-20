@@ -35,6 +35,7 @@ class lcd {
  public:
   lcd(const char *rev_info,
       LCD6100_IFACE lcd_iface,
+      uint8_t lcd_hw_reset_pin,
       LCD6100_CE lcd_ce,
       uint32_t lcd_speed);
 
@@ -68,6 +69,7 @@ class lcd {
 
   // LCD SPI
   LCD6100_IFACE m_lcd_iface;
+  uint8_t       m_lcd_hw_reset_pin;
   LCD6100_CE    m_lcd_ce;
   uint32_t      m_lcd_speed;
   bool          m_lcd_initialized;

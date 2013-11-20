@@ -73,14 +73,16 @@
 
 lcd::lcd(const char *rev_info,
 	 LCD6100_IFACE lcd_iface,
+	 uint8_t lcd_hw_reset_pin,
 	 LCD6100_CE lcd_ce,
 	 uint32_t lcd_speed)
 {
   m_rev_info = rev_info;
 
-  m_lcd_iface = lcd_iface;
-  m_lcd_ce    = lcd_ce;
-  m_lcd_speed = lcd_speed;
+  m_lcd_iface        = lcd_iface;
+  m_lcd_hw_reset_pin = lcd_hw_reset_pin;
+  m_lcd_ce           = lcd_ce;
+  m_lcd_speed        = lcd_speed;
 
   init_members();
 }
@@ -97,6 +99,7 @@ void lcd::initialize(void)
 {
   // Init LCD
   if (lcd6100_initialize(m_lcd_iface,
+			 m_lcd_hw_reset_pin,
                          m_lcd_ce,
                          m_lcd_speed) != LCD6100_SUCCESS) {
 
