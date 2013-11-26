@@ -64,6 +64,8 @@ class lcd {
 
   void reset_analog_time(void);
 
+  void clear_analog_time(void);
+
  private:
   string m_rev_info;
 
@@ -93,8 +95,6 @@ class lcd {
   // Keep track of analog time
   uint8_t m_ana_sec_end_row;
   uint8_t m_ana_sec_end_col;
-  uint8_t m_ana_old_sec_end_row;
-  uint8_t m_ana_old_sec_end_col;
 
   LCD6100_COLOUR m_ana_bg_colour;
   LCD6100_COLOUR m_ana_fg_colour;

@@ -114,14 +114,12 @@ void lcd::initialize(void)
   draw_rev_info();
 
   // Create digital time area
-  LCD6100_COLOUR digital_bg_colour;
-  digital_bg_colour.wd = DIGITAL_BG_COLOUR;
   if (lcd6100_draw_rectangle(DIGITAL_START_ROW,
 			     DIGITAL_START_COL,
 			     DIGITAL_END_ROW,
 			     DIGITAL_END_COL,
 			     true,
-			     digital_bg_colour) != LCD6100_SUCCESS) {
+			     m_dig_bg_colour) != LCD6100_SUCCESS) {
 
     throw_lcd6100_exception("Create digital time area");
   }
@@ -130,12 +128,10 @@ void lcd::initialize(void)
   draw_digital_time();
 
   // Create analog time area
-  LCD6100_COLOUR analog_colour;
-  analog_colour.wd = ANALOG_FG_COLOUR;
   if (lcd6100_draw_circle(ANALOG_ORIGO_ROW,
 			  ANALOG_ORIGO_COL,
 			  ANALOG_RADIUS,
-			  analog_colour) != LCD6100_SUCCESS) {
+			  m_ana_fg_colour) != LCD6100_SUCCESS) {
 
     throw_lcd6100_exception("Create analog time area");
   }
@@ -275,9 +271,6 @@ void lcd::update_analog_time(uint8_t sec_end_row,
   if ( (sec_end_row != m_ana_sec_end_row) ||
        (sec_end_col != m_ana_sec_end_col) ) {
 
-    m_ana_old_sec_end_row = m_ana_sec_end_row;
-    m_ana_old_sec_end_col = m_ana_sec_end_col;
-
     m_ana_sec_end_row = sec_end_row;
     m_ana_sec_end_col = sec_end_col;
 
@@ -293,16 +286,6 @@ void lcd::draw_analog_time(void)
 
   if (m_ana_sec_updated) {
 
-    // Erase old second
-    if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
-			  ANALOG_ORIGO_COL,
-			  m_ana_old_sec_end_row,
-			  m_ana_old_sec_end_col,
-			  m_ana_bg_colour) != LCD6100_SUCCESS) {
-
-      throw_lcd6100_exception("Erase old analog second");
-    }
-
     // Draw new second
     if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
 			  ANALOG_ORIGO_COL,
@@ -310,7 +293,7 @@ void lcd::draw_analog_time(void)
 			  m_ana_sec_end_col,
 			  m_ana_fg_colour) != LCD6100_SUCCESS) {
 
-      throw_lcd6100_exception("Draw new analog second");
+      throw_lcd6100_exception("Draw analog second");
     }
 
     m_ana_sec_updated = false; // Mark as drawn
@@ -321,33 +304,34 @@ void lcd::draw_analog_time(void)
 
 void lcd::reset_analog_time(void)
 {
-  // Erase old second
-  if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
-			ANALOG_ORIGO_COL,
-			m_ana_old_sec_end_row,
-			m_ana_old_sec_end_col,
-			m_ana_bg_colour) != LCD6100_SUCCESS) {
-    
-    throw_lcd6100_exception("Erase old analog second");
+  update_analog_time(ANALOG_ORIGO_ROW + get_analog_radius(),
+		     ANALOG_ORIGO_COL);
+  draw_analog_time();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void lcd::clear_analog_time(void)
+{
+  // Clear analog time circle
+  if (lcd6100_draw_rectangle(ANALOG_ORIGO_ROW - ANALOG_RADIUS - 1,
+			     ANALOG_ORIGO_COL - ANALOG_RADIUS - 1,
+			     ANALOG_ORIGO_ROW + ANALOG_RADIUS + 1,
+			     ANALOG_ORIGO_COL + ANALOG_RADIUS + 1,
+			     true,
+			     m_ana_bg_colour) != LCD6100_SUCCESS) {
+
+    throw_lcd6100_exception("Create digital time circle");
   }
 
-  m_ana_sec_end_row = ANALOG_ORIGO_ROW + get_analog_radius();
-  m_ana_sec_end_col = ANALOG_ORIGO_COL;
+  // Create analog time circle
+  if (lcd6100_draw_circle(ANALOG_ORIGO_ROW,
+			  ANALOG_ORIGO_COL,
+			  ANALOG_RADIUS,
+			  m_ana_fg_colour) != LCD6100_SUCCESS) {
 
-  m_ana_old_sec_end_row = m_ana_sec_end_row;
-  m_ana_old_sec_end_col = m_ana_sec_end_col;
-
-  // Draw reset second
-  if (lcd6100_draw_line(ANALOG_ORIGO_ROW,
-			ANALOG_ORIGO_COL,
-			m_ana_sec_end_row,
-			m_ana_sec_end_col,
-			m_ana_fg_colour) != LCD6100_SUCCESS) {
-    
-    throw_lcd6100_exception("Draw reset analog second");
+    throw_lcd6100_exception("Create analog time circle");
   }
-
-  m_ana_sec_updated = false; // Mark as drawn
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -377,9 +361,6 @@ void lcd::init_members(void)
 
   m_ana_sec_end_row = ANALOG_ORIGO_ROW + get_analog_radius();
   m_ana_sec_end_col = ANALOG_ORIGO_COL;
-
-  m_ana_old_sec_end_row = m_ana_sec_end_row;
-  m_ana_old_sec_end_col = m_ana_sec_end_col;
 
   m_ana_bg_colour.wd = ANALOG_BG_COLOUR;
   m_ana_fg_colour.wd = ANALOG_FG_COLOUR;

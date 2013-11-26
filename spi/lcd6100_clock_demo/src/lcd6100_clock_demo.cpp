@@ -32,7 +32,7 @@ using namespace std;
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 
-#define DEMO_REVISION  "R1A03"
+#define DEMO_REVISION  "R1A04"
 
 #define LCD_IFACE       LCD6100_IFACE_BITBANG
 #define LCD_HW_RES_PIN  23  // Connector P1-16
@@ -45,15 +45,15 @@ using namespace std;
 
 // Data periodically updated by controller thread
 typedef struct {
-  uint8_t hour;
-  uint8_t min;
-  uint8_t sec;
-} LCD_DIGITAL_TIME;
-
-typedef struct {
-  uint8_t sec_end_row;
-  uint8_t sec_end_col;
-} LCD_ANALOG_TIME;
+  uint32_t timer_tick;
+  bool     update_digital;
+  bool     update_analog;
+  uint8_t  digital_hour;
+  uint8_t  digital_min;
+  uint8_t  digital_sec;
+  uint8_t  analog_sec_end_row;
+  uint8_t  analog_sec_end_col;
+} LCD_TIME;
 
 /////////////////////////////////////////////////////////////////////////////
 //               Function prototypes
@@ -96,13 +96,8 @@ static volatile sig_atomic_t g_clock_started = 0;
 
 static sem_t g_ctrl_sem;
 
-static LCD_DIGITAL_TIME g_lcd_digital_time = {0, 0, 0};
-static bool g_update_digital = true;
-static pthread_mutex_t g_update_digital_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static LCD_ANALOG_TIME g_lcd_analog_time = {0, 0};
-static bool g_update_analog = true;
-static pthread_mutex_t g_update_analog_mutex = PTHREAD_MUTEX_INITIALIZER;
+static LCD_TIME g_lcd_time;
+static pthread_mutex_t g_lcd_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static bool g_timer_thread_error = false;
 
@@ -117,32 +112,44 @@ static void timer_thread_func(union sigval sv)
 
   // If controller got mutex here, we are in trouble and probably late!
   // But this can also happen if controller is doing periodic check.
-  if (pthread_mutex_trylock(&g_update_digital_mutex) == EBUSY) {
-    cout << "WARNING: Timer thread got no digital mutex, are we late?\n";
+  /*
+  if (pthread_mutex_trylock(&g_lcd_time_mutex) == EBUSY) {
+    cout << "WARNING: Timer thread got no time mutex, are we late?\n";
     return;
   }
-  if (pthread_mutex_trylock(&g_update_analog_mutex) == EBUSY) {
-    cout << "WARNING: Timer thread got no analog mutex, are we late?\n";
-    pthread_mutex_unlock(&g_update_digital_mutex);
-    return;
-  }
+  */
 
-  // Check that controller has updated with new data
-  if (g_update_digital) {
-    cout << "WARNING: Timer thread detected non-updated digital time\n";
-  }
-  if (g_update_analog) {
-    cout << "WARNING: Timer thread detected non-updated analog time\n";
-  }
+  pthread_mutex_lock(&g_lcd_time_mutex);
+
+  // We got the mutex now!
 
   try {
-    g_lcd->draw_digital_time(); // Draw LCD digital time    
-    g_lcd->draw_analog_time();  // Draw LCD analog time
-    
-    // Signal controller thread ok to update new data
-    g_update_digital = true;
-    g_update_analog = true;
-  } 
+    // Check that controller has updated with new data
+    if (g_lcd_time.update_digital) {
+      cout << "WARNING: Timer thread detected non-updated digital time\n";
+    }
+    if (g_lcd_time.update_analog) {
+      cout << "WARNING: Timer thread detected non-updated analog time\n";
+    }
+
+    // Timer fires each 0.05 seconds
+    // Digital time shall be updated once per second
+    // Analog time shall always be updated
+    if (g_lcd_time.timer_tick % 20 == 0) {
+      g_lcd->draw_digital_time();       // Draw LCD digital time
+      g_lcd_time.update_digital = true; // Signal controller thread ok
+                                        // to update new data
+    }
+
+    g_lcd->draw_analog_time();       // Draw LCD analog time
+
+    if (g_lcd_time.timer_tick % (20 * 60) == 0) {
+      g_lcd->clear_analog_time();    // Clear last analog minute
+    }
+
+    g_lcd_time.update_analog = true; // Signal controller thread ok
+                                     // to update new data    
+  }
   catch (excep &exp) {
     cout << exp.what();
     g_timer_thread_error = true;
@@ -152,8 +159,7 @@ static void timer_thread_func(union sigval sv)
     g_timer_thread_error = true;
   }
 
-  pthread_mutex_unlock(&g_update_digital_mutex);
-  pthread_mutex_unlock(&g_update_analog_mutex);
+  pthread_mutex_unlock(&g_lcd_time_mutex);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -169,7 +175,7 @@ static void *ctrl_thread_func(void *ptr)
     while (g_run_demo) {
       
       // Take it easy
-      if (delay(0.10) != DELAY_SUCCESS) {
+      if (delay(0.020) != DELAY_SUCCESS) {
 	THROW_EXP(0, 0, "controller thread, delay() failed", NULL);
       }
       
@@ -178,69 +184,61 @@ static void *ctrl_thread_func(void *ptr)
 	continue;
       }
       
-      // Only update if timer thread has drawn old data
-      // This means that one second has passed
+      // Only update if timer thread has drawn old data      
       // Prepare (update) data for next drawing
 
-      pthread_mutex_lock(&g_update_digital_mutex);
-      if (!g_update_digital) {
-	pthread_mutex_unlock(&g_update_digital_mutex);
-      }
-      else {      
+      pthread_mutex_lock(&g_lcd_time_mutex);
+
+      if (g_lcd_time.update_digital) {
 	// Update digital time
-	if (++g_lcd_digital_time.sec == 60) {
-	  g_lcd_digital_time.sec = 0;
-	  if (++g_lcd_digital_time.min == 60) {
-	    g_lcd_digital_time.min = 0;
-	    if (++g_lcd_digital_time.hour == 24) {
-	      g_lcd_digital_time.hour = 0;
+	// This means that one second has passed
+	if (++g_lcd_time.digital_sec == 60) {
+	  g_lcd_time.digital_sec = 0;
+	  if (++g_lcd_time.digital_min == 60) {
+	    g_lcd_time.digital_min = 0;
+	    if (++g_lcd_time.digital_hour == 24) {
+	      g_lcd_time.digital_hour = 0;
 	    }
 	  }      
 	}
-	g_lcd->update_digital_time(g_lcd_digital_time.hour,
-				   g_lcd_digital_time.min,
-				   g_lcd_digital_time.sec);
+	g_lcd->update_digital_time(g_lcd_time.digital_hour,
+				   g_lcd_time.digital_min,
+				   g_lcd_time.digital_sec);
 	
-	g_update_digital = false; // No need to update until
-             	                  // timer thread has drawn this data
-	
-	pthread_mutex_unlock(&g_update_digital_mutex);
+	g_lcd_time.update_digital = false; // No need to update until
+             	                           // timer thread has drawn this data	
       }
 
-      pthread_mutex_lock(&g_update_analog_mutex);
-      if (!g_update_analog) {
-	pthread_mutex_unlock(&g_update_analog_mutex);
-      }
-      else {      
+      if (g_lcd_time.update_analog) {
 	// Update analog time
+	// This means that 0.05 seconds has passed
 	// Note! One second equals 6 degrees
+	g_lcd_time.timer_tick++;
+
 	const uint8_t origo_row = g_lcd->get_analog_origo_row();
 	const uint8_t origo_col = g_lcd->get_analog_origo_col();
 	const uint8_t r = g_lcd->get_analog_radius();
-	const uint8_t s = g_lcd_digital_time.sec;
+	const float   s = g_lcd_time.timer_tick * 0.05;
 
-	g_lcd_analog_time.sec_end_row = origo_row + (r * cos(s*6*M_PI/180.0));
-	g_lcd_analog_time.sec_end_col = origo_col + (r * sin(s*6*M_PI/180.0));
+	g_lcd_time.analog_sec_end_row = origo_row + (r * cos(s*6*M_PI/180.0));
+	g_lcd_time.analog_sec_end_col = origo_col + (r * sin(s*6*M_PI/180.0));
 	
-	g_lcd->update_analog_time(g_lcd_analog_time.sec_end_row,
-				  g_lcd_analog_time.sec_end_col);
+	g_lcd->update_analog_time(g_lcd_time.analog_sec_end_row,
+				  g_lcd_time.analog_sec_end_col);
 
-	g_update_analog = false; // No need to update until
-             	                 // timer thread has drawn this data
-	
-	pthread_mutex_unlock(&g_update_analog_mutex);
+	g_lcd_time.update_analog = false; // No need to update until
+             	                          // timer thread has drawn this data       
       }
+      pthread_mutex_unlock(&g_lcd_time_mutex);
     }    
   } 
   catch (excep &exp) {
     cout << exp.what();
-    pthread_mutex_unlock(&g_update_digital_mutex);
-    pthread_mutex_unlock(&g_update_analog_mutex);
+    pthread_mutex_unlock(&g_lcd_time_mutex);
   }
   catch (...) {
     cout << "Unknown exception in controller thread\n";
-    pthread_mutex_unlock(&g_update_digital_mutex);
-    pthread_mutex_unlock(&g_update_analog_mutex);
+    pthread_mutex_unlock(&g_lcd_time_mutex);
   }
 
   return NULL;
@@ -290,27 +288,27 @@ static void start_clock(void)
   // Reset digital clock on LCD
   g_lcd->reset_digital_time();
 
-  // Signal controller thread ok to update new data
-  pthread_mutex_lock(&g_update_digital_mutex);
-  g_lcd_digital_time.hour = 0;
-  g_lcd_digital_time.min  = 0;
-  g_lcd_digital_time.sec  = 0;
-  g_update_digital = true;
-  pthread_mutex_unlock(&g_update_digital_mutex);
-
   // Reset analog clock on LCD
+  g_lcd->clear_analog_time();
+  g_lcd->reset_analog_time();
+
   const uint8_t analog_zero_sec_row =
     g_lcd->get_analog_origo_row() + g_lcd->get_analog_radius();
   const uint8_t analog_zero_sec_col = g_lcd->get_analog_origo_col();
 
-  g_lcd->reset_analog_time();
-
   // Signal controller thread ok to update new data
-  pthread_mutex_lock(&g_update_analog_mutex);
-  g_lcd_analog_time.sec_end_row = analog_zero_sec_row;
-  g_lcd_analog_time.sec_end_col = analog_zero_sec_col;
-  g_update_analog = true;
-  pthread_mutex_unlock(&g_update_analog_mutex);
+  pthread_mutex_lock(&g_lcd_time_mutex);
+
+  g_lcd_time.timer_tick = 0;
+  g_lcd_time.update_digital = true;
+  g_lcd_time.update_analog  = true;
+  g_lcd_time.digital_hour = 0;
+  g_lcd_time.digital_min  = 0;
+  g_lcd_time.digital_sec  = 0;
+  g_lcd_time.analog_sec_end_row = analog_zero_sec_row;
+  g_lcd_time.analog_sec_end_col = analog_zero_sec_col;
+
+  pthread_mutex_unlock(&g_lcd_time_mutex);
 
   // Set the sigevent structure to cause the signal
   // to be delivered by creating a new thread.
@@ -320,12 +318,12 @@ static void start_clock(void)
   se.sigev_notify_function = timer_thread_func;
   se.sigev_notify_attributes = NULL;
 
-  // Specify a repeating timer that fires each 1 seconds.
+  // Specify a repeating timer that fires each 0.25 seconds.
   // First expiration is after 1 seconds.
   ts.it_value.tv_sec = 1;
   ts.it_value.tv_nsec = 0;
-  ts.it_interval.tv_sec = 1;
-  ts.it_interval.tv_nsec = 0;
+  ts.it_interval.tv_sec = 0;
+  ts.it_interval.tv_nsec = 50000000; // 0.05 s
 
   // Create timer
   rc = timer_create(CLOCK_REALTIME, &se, &g_timer_id);
