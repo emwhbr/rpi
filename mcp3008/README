@@ -1,0 +1,9 @@
+MCP3008 is an analog-to-digital converter (Microchip).
+The ADC resolution is 10 bit with a digital output code
+0-1023 for input voltage 0-Vref.
+
+Lsb = Vref / 1024
+Digital output = 1024 x Vin / Vref
+
+The chip can handle 8 input channels and is controlled
+by SPI bus (modes 0,0 and 1,1).

@@ -1,0 +1,29 @@
+C++ class 'mcp3008_io' encapsulates functionality for using
+the digital-to-analog converter(DAC) MCP3008 (Microchip).
+
+Note! This class is not thread safe and there are no features
+      that protects the SPI bus from multiple callers.
+      The class only includes the basic functions for
+      operating the MCP3008.
+
+Files:
+------
+build.sh		Build script for this project
+Makefile	      	Makefile for this project
+
+build_clean.sh		Wrapper script for clean build
+build_dbg.sh		Wrapper script for debug build
+build_rel.sh		Wrapper script for release build
+
+obj/			Directory for the result of the build
+
+src/
+  mcp3008_io.h		Implements the
+  mcp3008_io.cpp	C++ class 'tmp102_io'
+
+  test_mcp3008.cpp	Test application
+
+README			This file
+
+Example output from test application (test_mcp3008.cpp):
+--------------------------------------------------------
