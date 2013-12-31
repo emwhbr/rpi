@@ -44,7 +44,7 @@ case "$1" in
 
     clean)
         echo "==[CLEANUP]==="
-        make clean
+        make JOBS=${PARALLEL_ARGS} clean
         ;;
 
     *)

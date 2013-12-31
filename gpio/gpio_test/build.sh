@@ -10,20 +10,40 @@
 #  *                                                                      *
 #  ************************************************************************/
 
+################################################################
+function get_parallel_args()
+################################################################
+{
+    # Check number of CPU's in this machine
+    nr_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
+    
+    # Add one to get number of parallel jobs
+    ((nr_jobs=nr_cpus + 1))
+    
+    echo "-j${nr_jobs}"
+    return 0
+}
+
+### Number of parallel jobs on this machine
+PARALLEL_ARGS=`get_parallel_args`
+
+### Toolchain setup
+PATH=/opt/rpi/toolchains/x-tools/arm-unknown-linux-gnueabihf/bin:$PATH
+
 case "$1" in
     release)
         echo "==[MAKE RELEASE]==="
-        make BUILD_TYPE=RELEASE all
+        make JOBS=${PARALLEL_ARGS} BUILD_TYPE=RELEASE all
         ;;
 
     debug)
         echo "==[MAKE DEBUG]==="
-        make BUILD_TYPE=DEBUG all
+        make JOBS=${PARALLEL_ARGS} BUILD_TYPE=DEBUG all
         ;;
 
     clean)
         echo "==[CLEANUP]==="
-        make clean
+        make JOBS=${PARALLEL_ARGS} clean
         ;;
 
     *)

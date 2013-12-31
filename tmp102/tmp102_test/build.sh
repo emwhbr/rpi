@@ -33,17 +33,17 @@ PATH=/opt/rpi/toolchains/x-tools/arm-unknown-linux-gnueabihf/bin:$PATH
 case "$1" in
     release)
         echo "==[MAKE RELEASE]==="
-        make BUILD_TYPE=RELEASE all
+        make JOBS=${PARALLEL_ARGS} BUILD_TYPE=RELEASE all
         ;;
 
     debug)
         echo "==[MAKE DEBUG]==="
-        make BUILD_TYPE=DEBUG all
+        make JOBS=${PARALLEL_ARGS} BUILD_TYPE=DEBUG all
         ;;
 
     clean)
         echo "==[CLEANUP]==="
-        make clean
+        make JOBS=${PARALLEL_ARGS} clean
         ;;
 
     *)
