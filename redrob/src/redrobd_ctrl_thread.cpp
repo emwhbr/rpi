@@ -29,13 +29,15 @@
 #define ALIVE_THREAD_FREQUENCY        2.0 // Hz
 #define ALIVE_THREAD_START_TIMEOUT    1.0 // Seconds
 #define ALIVE_THREAD_EXECUTE_TIMEOUT  0.5 // Seconds
-#define ALIVE_THREAD_STOP_TIMEOUT     2.0 // Seconds
+#define ALIVE_THREAD_STOP_TIMEOUT     1.5 // Seconds
+                                          // Period time + one extra second
 
 #define BAT_MON_THREAD_NAME             "REDROBD_BAT_MON"
 #define BAT_MON_THREAD_FREQUENCY        0.2 // Hz
 #define BAT_MON_THREAD_START_TIMEOUT    1.0 // Seconds
 #define BAT_MON_THREAD_EXECUTE_TIMEOUT  0.5 // Seconds
 #define BAT_MON_THREAD_STOP_TIMEOUT     6.0 // Seconds
+                                            // Period time + one extra second
 
 #define BAT_MIN_ALLOWED_VOLTAGE  6.7 // Volt
 
@@ -69,7 +71,7 @@ redrobd_ctrl_thread::~redrobd_ctrl_thread(void)
 long redrobd_ctrl_thread::setup(void)
 {
   try {
-    redrobd_log_writeln(get_name() + " : setup");
+    redrobd_log_writeln(get_name() + " : setup started");
 
     init_members();
 
@@ -176,6 +178,8 @@ long redrobd_ctrl_thread::setup(void)
 		get_name().c_str());      
     }
 
+    redrobd_log_writeln(get_name() + " : setup done");
+
     return THREAD_SUCCESS;    
   }
   catch (excep &exp) {
@@ -193,7 +197,7 @@ long redrobd_ctrl_thread::setup(void)
 long redrobd_ctrl_thread::cleanup(void)
 {
   try {
-    redrobd_log_writeln(get_name() + " : cleanup");
+    redrobd_log_writeln(get_name() + " : cleanup started");
 
     ////////////////////////////////////////
     //  FINALIZE BATTERY MONITOR THREAD
@@ -265,6 +269,8 @@ long redrobd_ctrl_thread::cleanup(void)
     // Delete the cyclic alive thread object
     m_alive_thread_auto.reset();
     
+    redrobd_log_writeln(get_name() + " : cleanup done");
+
     return THREAD_SUCCESS;
   }
   catch (excep &exp) {
@@ -328,7 +334,7 @@ long redrobd_ctrl_thread::cyclic_execute(void)
       // All other steerings are ignored for now
        ostringstream oss_msg;
        oss_msg << get_name()
-	       <<" : Got undefined steering = 0x"
+	       << " : Got undefined steering = 0x"
 	       << hex << setw(4) << setfill('0') << (unsigned)steering;
        redrobd_log_writeln(oss_msg.str());
 

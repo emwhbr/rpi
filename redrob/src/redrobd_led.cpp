@@ -22,6 +22,8 @@ static uint8_t g_pin_func_sysfail;
 static uint8_t g_pin_func_alive;
 static uint8_t g_pin_func_bat_low;
 
+static bool g_sysfail_active = false;
+
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
 /////////////////////////////////////////////////////////////////////////////
@@ -50,7 +52,10 @@ void redrobd_led_finalize(void)
   // Note! Assumes GPIO already initialized
 
   // Restore all LED pins
-  redrobd_gpio_set_function(PIN_SYSFAIL, g_pin_func_sysfail);
+  // SYSFAIL pin is not restored if activated
+  if (!g_sysfail_active) {
+    redrobd_gpio_set_function(PIN_SYSFAIL, g_pin_func_sysfail);
+  }
   redrobd_gpio_set_function(PIN_ALIVE,   g_pin_func_alive);
   redrobd_gpio_set_function(PIN_BAT_LOW, g_pin_func_bat_low);
 }
@@ -63,9 +68,11 @@ void redrobd_led_sysfail(bool activate)
 
   if (activate) {
     redrobd_gpio_set_pin_high(PIN_SYSFAIL);
+    g_sysfail_active = true;
   }
   else {
     redrobd_gpio_set_pin_low(PIN_SYSFAIL);
+    g_sysfail_active = false;
   }
 }
 

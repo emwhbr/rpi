@@ -88,16 +88,13 @@ string excep::get_function(void)
 
 void excep::get_stack_frames(STACK_FRAMES &frames)
 {
-  unsigned i = 0;
-
   bzero(&frames, sizeof(frames));
 
-  while ( m_stack_frames[i] ) {
-    frames.frames[i] = (uint32_t)m_stack_frames[i];
-    i++;
+  for (int j=0; j < m_nr_frames; j++) {
+    frames.frames[j] = (uint32_t)m_stack_frames[j];
   }
 
-  frames.active_frames = i;
+  frames.active_frames = m_nr_frames;
 }
 
 ////////////////////////////////////////////////////////////////

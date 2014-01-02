@@ -92,7 +92,7 @@ void syslog_open(const char *ident)
 void syslog_info(const char *format, ...)
 {
   // Retrieve any additional arguments for the format string
-  char info_buffer[512];
+  char info_buffer[2048];
   va_list info_args;
   va_start(info_args, format);
   vsprintf(info_buffer, format, info_args);
@@ -107,7 +107,7 @@ void syslog_info(const char *format, ...)
 void syslog_error(const char *format, ...)
 {
   // Retrieve any additional arguments for the format string
-  char info_buffer[512];
+  char info_buffer[2048];
   va_list info_args;
   va_start(info_args, format);
   vsprintf(info_buffer, format, info_args);

@@ -21,7 +21,7 @@ using namespace std;
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of macros
 /////////////////////////////////////////////////////////////////////////////
-#define MAX_NR_STACK_FRAMES  32
+#define MAX_NR_STACK_FRAMES  16
 
 #define EXP(source, code, info_format, ...) \
   excep(__FILE__, __LINE__, __PRETTY_FUNCTION__, \

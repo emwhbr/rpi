@@ -74,10 +74,12 @@ void redrobd_voltage_monitor_thread::get_voltage(REDROBD_VOLTAGE &value)
 long redrobd_voltage_monitor_thread::setup(void)
 {
   try {
-    redrobd_log_writeln(get_name() + " : setup");
+    redrobd_log_writeln(get_name() + " : setup started");
 
     init_members();
             
+    redrobd_log_writeln(get_name() + " : setup done");
+
     return THREAD_SUCCESS;    
   }
   catch (excep &exp) {
@@ -95,8 +97,10 @@ long redrobd_voltage_monitor_thread::setup(void)
 long redrobd_voltage_monitor_thread::cleanup(void)
 {
   try {
-    redrobd_log_writeln(get_name() + " : cleanup");
+    redrobd_log_writeln(get_name() + " : cleanup started");
     
+    redrobd_log_writeln(get_name() + " : cleanup done");
+
     return THREAD_SUCCESS;
   }
   catch (excep &exp) {

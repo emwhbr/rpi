@@ -44,12 +44,14 @@ redrobd_alive_thread::~redrobd_alive_thread(void)
 long redrobd_alive_thread::setup(void)
 {
   try {
-    redrobd_log_writeln(get_name() + " : setup");
+    redrobd_log_writeln(get_name() + " : setup started");
 
     init_members();
 
     redrobd_led_alive(true); // Turn status LED on
             
+    redrobd_log_writeln(get_name() + " : setup done");
+
     return THREAD_SUCCESS;    
   }
   catch (excep &exp) {
@@ -67,9 +69,11 @@ long redrobd_alive_thread::setup(void)
 long redrobd_alive_thread::cleanup(void)
 {
   try {
-    redrobd_log_writeln(get_name() + " : cleanup");
+    redrobd_log_writeln(get_name() + " : cleanup started");
 
     redrobd_led_alive(false); // Turn status LED off
+
+    redrobd_log_writeln(get_name() + " : cleanup done");
     
     return THREAD_SUCCESS;
   }

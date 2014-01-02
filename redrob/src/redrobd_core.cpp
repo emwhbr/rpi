@@ -24,7 +24,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "REDROBD"
-#define RSTATE           "R1A01"
+#define RSTATE           "R1A02"
 
 #ifndef REDROBD_CFG_FILE
 #define CFG_FILE "/tmp/"REDROBD_NAME".cfg"
@@ -34,6 +34,8 @@
 #define CTRL_THREAD_START_TIMEOUT     3.0  // Seconds
 #define CTRL_THREAD_EXECUTE_TIMEOUT   0.5  // Seconds
 #define CTRL_THREAD_STOP_TIMEOUT     10.0  // Seconds
+                                           // Long enough for controller and
+                                           // its child threads to complete
 
 #define MUTEX_LOCK(mutex) \
   ({ if (pthread_mutex_lock(&mutex)) { \
@@ -445,8 +447,8 @@ void redrobd_core::internal_initialize(string logfile,
   try {
     // Initialize cyclic control thread object
     redrobd_thread_initialize_cyclic((cyclic_thread *)thread_ptr,
-				   CTRL_THREAD_START_TIMEOUT,
-				   CTRL_THREAD_EXECUTE_TIMEOUT);
+				     CTRL_THREAD_START_TIMEOUT,
+				     CTRL_THREAD_EXECUTE_TIMEOUT);
   }
   catch (...) {
     m_ctrl_thread_auto = auto_ptr<redrobd_ctrl_thread>(thread_ptr);
