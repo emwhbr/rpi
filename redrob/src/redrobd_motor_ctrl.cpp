@@ -15,15 +15,14 @@
 #include "redrobd_motor_ctrl.h"
 #include "redrobd_gpio.h"
 #include "redrobd_log.h"
-#include "rpi_hw.h"
 
 // Implementation notes:
 // 1. Skid steering (differential drive, tank style).
 //    Turn right : Left motor forward, right motor backward
 //    Turn left  : Right motor forward, left motor backward
 //
-// 2. Right motor is controlled by L293D-1A,2A
-//    Left motor is controlled by  L293D-3A,4A
+// 2. Motor driver hardware is L293D H-bridge using
+//    bidirectional DC-motor control of right and left motor.
 //
 // 3. Assumes GPIO interface already initialized.
 //
@@ -38,8 +37,16 @@
 
 ////////////////////////////////////////////////////////////////
 
-redrobd_motor_ctrl::redrobd_motor_ctrl(void)
+redrobd_motor_ctrl::redrobd_motor_ctrl(uint8_t pin_right_motor_1,
+				       uint8_t pin_right_motor_2,
+				       uint8_t pin_left_motor_1,
+				       uint8_t pin_left_motor_2)
 {
+  m_pin_rm_1 = pin_right_motor_1;
+  m_pin_rm_2 = pin_right_motor_2;
+  m_pin_lm_1 = pin_left_motor_1;
+  m_pin_lm_2 = pin_left_motor_2;
+
   init_members();
 }
 
@@ -54,10 +61,10 @@ redrobd_motor_ctrl::~redrobd_motor_ctrl(void)
 void redrobd_motor_ctrl::initialize(bool continuous_steer)
 {
   // Set all pins as outputs, save old pin functions
-  redrobd_gpio_set_function_out(PIN_L293D_1A, m_pin_func_l293d_1a);
-  redrobd_gpio_set_function_out(PIN_L293D_2A, m_pin_func_l293d_2a);
-  redrobd_gpio_set_function_out(PIN_L293D_3A, m_pin_func_l293d_3a);
-  redrobd_gpio_set_function_out(PIN_L293D_4A, m_pin_func_l293d_4a);
+  redrobd_gpio_set_function_out(m_pin_rm_1, m_pin_func_rm_1);
+  redrobd_gpio_set_function_out(m_pin_rm_2, m_pin_func_rm_2);
+  redrobd_gpio_set_function_out(m_pin_lm_1, m_pin_func_lm_1);
+  redrobd_gpio_set_function_out(m_pin_lm_2, m_pin_func_lm_2);
 
   // Set steer mode
   m_continuous_steer = continuous_steer;
@@ -76,10 +83,10 @@ void redrobd_motor_ctrl::finalize(void)
   steer_stop();
 
   // Restore all pins
-  redrobd_gpio_set_function(PIN_L293D_1A, m_pin_func_l293d_1a);
-  redrobd_gpio_set_function(PIN_L293D_2A, m_pin_func_l293d_2a);
-  redrobd_gpio_set_function(PIN_L293D_3A, m_pin_func_l293d_3a);
-  redrobd_gpio_set_function(PIN_L293D_4A, m_pin_func_l293d_4a);
+  redrobd_gpio_set_function(m_pin_rm_1, m_pin_func_rm_1);
+  redrobd_gpio_set_function(m_pin_rm_2, m_pin_func_rm_2);
+  redrobd_gpio_set_function(m_pin_lm_1, m_pin_func_lm_1);
+  redrobd_gpio_set_function(m_pin_lm_2, m_pin_func_lm_2);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -152,10 +159,10 @@ void redrobd_motor_ctrl::steer(uint16_t code)
 
 void redrobd_motor_ctrl::init_members(void)
 {
-  m_pin_func_l293d_1a = 0;
-  m_pin_func_l293d_2a = 0;
-  m_pin_func_l293d_3a = 0;
-  m_pin_func_l293d_4a = 0;
+  m_pin_func_rm_1 = 0;
+  m_pin_func_rm_2 = 0;
+  m_pin_func_lm_1 = 0;
+  m_pin_func_lm_2 = 0;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -239,12 +246,12 @@ void redrobd_motor_ctrl::steer_motor(REDROBD_MC_MOTOR_ID motor_id,
 
   switch (motor_id) {
   case REDROBD_MC_MOTOR_ID_RIGHT:
-    l293d_inp1 = PIN_L293D_1A;
-    l293d_inp2 = PIN_L293D_2A;
+    l293d_inp1 = m_pin_rm_1;
+    l293d_inp2 = m_pin_rm_2;
     break;
   case REDROBD_MC_MOTOR_ID_LEFT:
-    l293d_inp1 = PIN_L293D_3A;
-    l293d_inp2 = PIN_L293D_4A;
+    l293d_inp1 = m_pin_lm_1;
+    l293d_inp2 = m_pin_lm_2;
     break;
   }
 

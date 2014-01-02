@@ -37,21 +37,30 @@ using namespace std;
 class redrobd_remote_ctrl {
   
  public:
-  redrobd_remote_ctrl(void);
+  redrobd_remote_ctrl(uint8_t pin_forward,
+		      uint8_t pin_reverse,
+		      uint8_t pin_right,
+		      uint8_t pin_left);
+
   ~redrobd_remote_ctrl(void);
 
   void initialize(void);
-
   void finalize(void);
 
   uint16_t get_steering(void);
 
  private:
+  // GPIO pins
+  uint8_t m_pin_forward;
+  uint8_t m_pin_reverse;
+  uint8_t m_pin_right;
+  uint8_t m_pin_left;
+
   // Keep track of old pin functions
-  uint8_t m_pin_func_rf_in_0;
-  uint8_t m_pin_func_rf_in_1;
-  uint8_t m_pin_func_rf_in_2;
-  uint8_t m_pin_func_rf_in_3;
+  uint8_t m_pin_func_forward;
+  uint8_t m_pin_func_reverse;
+  uint8_t m_pin_func_right;
+  uint8_t m_pin_func_left;
 
   void init_members(void);
 };

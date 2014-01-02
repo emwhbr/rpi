@@ -50,10 +50,10 @@ class redrobd_ctrl_thread : public cyclic_thread {
   auto_ptr<redrobd_voltage_monitor_thread> m_bat_mon_thread_auto;
 
   // Remote control object
-  redrobd_remote_ctrl m_remote_ctrl;
+  auto_ptr<redrobd_remote_ctrl> m_remote_ctrl_auto;
 
   // Motor control object
-  redrobd_motor_ctrl m_motor_ctrl;
+  auto_ptr<redrobd_motor_ctrl> m_motor_ctrl_auto;
 
   // A/D Converter object pointer
   mcp3008_io *m_mcp3008_io_ptr;

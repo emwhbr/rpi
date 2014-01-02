@@ -24,7 +24,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "REDROBD"
-#define RSTATE           "R1A02"
+#define RSTATE           "R1A03"
 
 #ifndef REDROBD_CFG_FILE
 #define CFG_FILE "/tmp/"REDROBD_NAME".cfg"

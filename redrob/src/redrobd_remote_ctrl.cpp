@@ -11,7 +11,6 @@
 
 #include "redrobd_remote_ctrl.h"
 #include "redrobd_gpio.h"
-#include "rpi_hw.h"
 
 // Implementation notes:
 // 1. Assumes GPIO interface already initialized.
@@ -27,8 +26,16 @@
 
 ////////////////////////////////////////////////////////////////
 
-redrobd_remote_ctrl::redrobd_remote_ctrl(void)
+redrobd_remote_ctrl::redrobd_remote_ctrl(uint8_t pin_forward,
+					 uint8_t pin_reverse,
+					 uint8_t pin_right,
+					 uint8_t pin_left)
 {
+  m_pin_forward = pin_forward;
+  m_pin_reverse = pin_reverse;
+  m_pin_right   = pin_right;
+  m_pin_left    = pin_left;
+
   init_members();
 }
 
@@ -43,10 +50,10 @@ redrobd_remote_ctrl::~redrobd_remote_ctrl(void)
 void redrobd_remote_ctrl::initialize(void)
 {
   // Set all pins as inputs, save old pin functions
-  redrobd_gpio_set_function_inp(PIN_RF_IN_0, m_pin_func_rf_in_0);
-  redrobd_gpio_set_function_inp(PIN_RF_IN_1, m_pin_func_rf_in_1);
-  redrobd_gpio_set_function_inp(PIN_RF_IN_2, m_pin_func_rf_in_2);
-  redrobd_gpio_set_function_inp(PIN_RF_IN_3, m_pin_func_rf_in_3);
+  redrobd_gpio_set_function_inp(m_pin_forward, m_pin_func_forward);
+  redrobd_gpio_set_function_inp(m_pin_reverse, m_pin_func_reverse);
+  redrobd_gpio_set_function_inp(m_pin_right,   m_pin_func_right);
+  redrobd_gpio_set_function_inp(m_pin_left,    m_pin_func_left);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -54,10 +61,10 @@ void redrobd_remote_ctrl::initialize(void)
 void redrobd_remote_ctrl::finalize(void)
 {
   // Restore all pins
-  redrobd_gpio_set_function(PIN_RF_IN_0, m_pin_func_rf_in_0);
-  redrobd_gpio_set_function(PIN_RF_IN_1, m_pin_func_rf_in_1);
-  redrobd_gpio_set_function(PIN_RF_IN_2, m_pin_func_rf_in_2);
-  redrobd_gpio_set_function(PIN_RF_IN_3, m_pin_func_rf_in_3);
+  redrobd_gpio_set_function(m_pin_forward, m_pin_func_forward);
+  redrobd_gpio_set_function(m_pin_reverse, m_pin_func_reverse);
+  redrobd_gpio_set_function(m_pin_right,   m_pin_func_right);
+  redrobd_gpio_set_function(m_pin_left,    m_pin_func_left);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -66,19 +73,19 @@ uint16_t redrobd_remote_ctrl::get_steering(void)
 {
   uint16_t steering = REDROBD_RC_NONE;
 
-  if ( redrobd_gpio_get_pin(PIN_RF_IN_0) ) {
+  if ( redrobd_gpio_get_pin(m_pin_forward) ) {
     steering |= REDROBD_RC_FORWARD;
   }
 
-  if ( redrobd_gpio_get_pin(PIN_RF_IN_1) ) {
+  if ( redrobd_gpio_get_pin(m_pin_reverse) ) {
     steering |= REDROBD_RC_REVERSE;
   }
 
-  if ( redrobd_gpio_get_pin(PIN_RF_IN_2) ) {
+  if ( redrobd_gpio_get_pin(m_pin_right) ) {
     steering |= REDROBD_RC_RIGHT;
   }
 
-  if ( redrobd_gpio_get_pin(PIN_RF_IN_3) ) {
+  if ( redrobd_gpio_get_pin(m_pin_left) ) {
     steering |= REDROBD_RC_LEFT;
   }
 
@@ -93,8 +100,8 @@ uint16_t redrobd_remote_ctrl::get_steering(void)
 
 void redrobd_remote_ctrl::init_members(void)
 {
-  m_pin_func_rf_in_0 = 0;
-  m_pin_func_rf_in_1 = 0;
-  m_pin_func_rf_in_2 = 0;
-  m_pin_func_rf_in_3 = 0;
+  m_pin_func_forward = 0;
+  m_pin_func_reverse = 0;
+  m_pin_func_right   = 0;
+  m_pin_func_left    = 0;
 }

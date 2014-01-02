@@ -111,7 +111,7 @@ long redrobd_ctrl_thread::setup(void)
     // Initialize A/D Converter
     m_mcp3008_io_ptr->initialize(MCP3008_SPI_SPEED);
     
-    // Create the hardware configuration object
+    // Create the hardware configuration object object with garbage collector
     redrobd_hw_cfg *redrobd_hw_cfg_ptr =
       new redrobd_hw_cfg(m_mcp3008_io_ptr,
 			 (MCP3008_IO_CHANNEL)MCP3008_CHN_SHUTDOWN,
@@ -122,8 +122,17 @@ long redrobd_ctrl_thread::setup(void)
     // Initialize hardware configuration
     m_hw_cfg_auto->initialize();
 
+    // Create the remote control object with garbage collector
+    redrobd_remote_ctrl *rc_ptr =
+      new redrobd_remote_ctrl(PIN_RF_IN_0,  // Forward
+			      PIN_RF_IN_1,  // Reverse
+			      PIN_RF_IN_2,  // Right
+			      PIN_RF_IN_3); // Left
+
+    m_remote_ctrl_auto = auto_ptr<redrobd_remote_ctrl>(rc_ptr);
+
     // Initialize remote control
-    m_remote_ctrl.initialize();
+    m_remote_ctrl_auto->initialize();
 
     // Check if continuous steering was selected (DIP-switch)
     bool cont_steering = m_hw_cfg_auto->select_continuous_steering();
@@ -134,8 +143,17 @@ long redrobd_ctrl_thread::setup(void)
       redrobd_log_writeln(get_name() + " : Non-continuous steering selected");
     }
 
+    // Create the motor control object with garbage collector
+    redrobd_motor_ctrl *mc_ptr =
+      new redrobd_motor_ctrl(PIN_L293D_1A,  // Right motor
+			     PIN_L293D_2A,
+			     PIN_L293D_3A,  // Left motor
+			     PIN_L293D_4A);
+
+    m_motor_ctrl_auto = auto_ptr<redrobd_motor_ctrl>(mc_ptr);
+
     // Initialize motor control
-    m_motor_ctrl.initialize(cont_steering);
+    m_motor_ctrl_auto->initialize(cont_steering);
 
     // Create the cyclic battery monitor thread object with garbage collector
     redrobd_voltage_monitor_thread *thread_ptr2 =
@@ -226,22 +244,20 @@ long redrobd_ctrl_thread::cleanup(void)
     // Delete the cyclic battery monitor thread object
     m_bat_mon_thread_auto.reset();
 
-    // Finalize motor control
-    m_motor_ctrl.finalize();
+    // Finalize and delete the motor control object
+    m_motor_ctrl_auto->finalize();
+    m_motor_ctrl_auto.reset();
 
-    // Finalize remote control
-    m_remote_ctrl.finalize();
+    // Finalize and delete the remote control object
+    m_remote_ctrl_auto->finalize();
+    m_remote_ctrl_auto.reset();
 
-    // Finalize the hardware configuration object
+    // Finalize and delete the hardware configuration object
     m_hw_cfg_auto->finalize();
-
-    // Delete the hardware configuration object
     m_hw_cfg_auto.reset();
 
-    // Finalize A/D Converter
+    // Finalize and delete A/D Converter
     m_mcp3008_io_ptr->finalize();
-
-    // Delete the A/D Converter object
     delete m_mcp3008_io_ptr;
     m_mcp3008_io_ptr = NULL;
 
@@ -311,24 +327,28 @@ long redrobd_ctrl_thread::cyclic_execute(void)
     check_thread_run_status();
 
     // Check steering from remote control
-    uint16_t steering = m_remote_ctrl.get_steering();
+    uint16_t steering = m_remote_ctrl_auto->get_steering();
 
     // Do motor control
     switch (steering) {
     case REDROBD_RC_NONE:
-       m_motor_ctrl.steer(REDROBD_MC_NONE);
+       m_motor_ctrl_auto->steer(REDROBD_MC_NONE);
       break;
     case REDROBD_RC_FORWARD:
-      m_motor_ctrl.steer(REDROBD_MC_FORWARD);
+      redrobd_log_writeln(get_name() + " : steer forward");
+      m_motor_ctrl_auto->steer(REDROBD_MC_FORWARD);
       break;
     case REDROBD_RC_REVERSE:
-      m_motor_ctrl.steer(REDROBD_MC_REVERSE);
+      redrobd_log_writeln(get_name() + " : steer reverse");
+      m_motor_ctrl_auto->steer(REDROBD_MC_REVERSE);
       break; 
     case REDROBD_RC_RIGHT:
-      m_motor_ctrl.steer(REDROBD_MC_RIGHT);
+      redrobd_log_writeln(get_name() + " : steer right");
+      m_motor_ctrl_auto->steer(REDROBD_MC_RIGHT);
       break;
     case REDROBD_RC_LEFT:
-      m_motor_ctrl.steer(REDROBD_MC_LEFT);
+      redrobd_log_writeln(get_name() + " : steer left");
+      m_motor_ctrl_auto->steer(REDROBD_MC_LEFT);
       break;
     default:
       // All other steerings are ignored for now
@@ -338,7 +358,7 @@ long redrobd_ctrl_thread::cyclic_execute(void)
 	       << hex << setw(4) << setfill('0') << (unsigned)steering;
        redrobd_log_writeln(oss_msg.str());
 
-       m_motor_ctrl.steer(REDROBD_MC_STOP);
+       m_motor_ctrl_auto->steer(REDROBD_MC_STOP);
     }
 
     return THREAD_SUCCESS;

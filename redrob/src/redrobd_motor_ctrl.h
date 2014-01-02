@@ -46,21 +46,30 @@ typedef enum {REDROBD_MC_MOTOR_DIR_STOP,
 class redrobd_motor_ctrl {
   
  public:
-  redrobd_motor_ctrl(void);
+  redrobd_motor_ctrl(uint8_t pin_right_motor_1,
+		     uint8_t pin_right_motor_2,
+		     uint8_t pin_left_motor_1,
+		     uint8_t pin_left_motor_2);
+
   ~redrobd_motor_ctrl(void);
 
   void initialize(bool continuous_steer);
-
   void finalize(void);
 
   void steer(uint16_t code);
 
  private:
+  // GPIO pins
+  uint8_t m_pin_rm_1; // Right motor
+  uint8_t m_pin_rm_2;
+  uint8_t m_pin_lm_1; // Left motor
+  uint8_t m_pin_lm_2;
+
   // Keep track of old pin functions
-  uint8_t m_pin_func_l293d_1a;
-  uint8_t m_pin_func_l293d_2a;
-  uint8_t m_pin_func_l293d_3a;
-  uint8_t m_pin_func_l293d_4a;
+  uint8_t m_pin_func_rm_1;
+  uint8_t m_pin_func_rm_2;
+  uint8_t m_pin_func_lm_1;
+  uint8_t m_pin_func_lm_2;
 
   // Steering mode
   bool     m_continuous_steer;
