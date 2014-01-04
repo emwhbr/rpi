@@ -35,6 +35,7 @@ endif
 OBJ_DIR = ./obj
 SRC_DIR = ./src
 CFG_DIR = ./cfg
+SCRIPT_DIR = ./script
 
 DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/redrobd.o \
@@ -104,7 +105,12 @@ daemon : $(DAEMON_OBJS)
 all : daemon
 
 clean :
-	rm -f $(DAEMON_OBJS) $(OBJ_DIR)/*.$(ARCH) $(SRC_DIR)/*~ $(CFG_DIR)/*~ *~
+	rm -f $(DAEMON_OBJS)
+	rm -f $(OBJ_DIR)/*.$(ARCH)
+	rm -f $(SRC_DIR)/*~
+	rm -f $(CFG_DIR)/*~
+	rm -rf $(SCRIPT_DIR)/*~
+	rm -rf *~
 
 help:
 	@echo "Usage: make clean"

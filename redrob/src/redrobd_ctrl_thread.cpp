@@ -39,7 +39,7 @@
 #define BAT_MON_THREAD_STOP_TIMEOUT     6.0 // Seconds
                                             // Period time + one extra second
 
-#define BAT_MIN_ALLOWED_VOLTAGE  6.7 // Volt
+#define BAT_MIN_ALLOWED_VOLTAGE  6.9 // Volt
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
