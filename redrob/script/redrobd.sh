@@ -10,11 +10,31 @@
 #  *                                                                      *
 #  ************************************************************************/
 
-DAEMON_DIR="/proj/redrob/"
+DAEMON_DIR="/proj/redrob"
 DAEMON_EXE="redrobd_dbg.arm"
 
 SIG_RESTART_DAEMON="SIGHUP"
 SIG_TERMINATE_DAEMON="SIGTERM"
+
+GPIO_PIN_START_DISABLED="4"
+
+################################################################
+function is_start_disabled()
+################################################################
+{
+    # Set pin as input
+    echo "${GPIO_PIN_START_DISABLED}" > /sys/class/gpio/export
+    echo "in"  > /sys/class/gpio/gpio${GPIO_PIN_START_DISABLED}/direction
+    
+    # Read pin
+    pin_value=`cat /sys/class/gpio/gpio${GPIO_PIN_START_DISABLED}/value`
+
+    # Restore pin
+    echo "${GPIO_PIN_START_DISABLED}" > /sys/class/gpio/unexport
+
+    echo ${pin_value}
+    return 0
+}
 
 ################################################################
 function pid_of_daemon()
@@ -34,7 +54,16 @@ function pid_of_daemon()
 function do_start()
 ################################################################
 {
-    ${DAEMON_DIR}/${DAEMON_EXE}
+    # Check if start is disabled by GPIO pin
+    start_disabled=`is_start_disabled`
+
+    # Start daemon
+    if [ $start_disabled -eq 1 ]; then
+	echo "Start Redrob daemon - disabled by GPIO pin ${GPIO_PIN_START_DISABLED}"
+    else
+	echo "Start Redrob daemon"
+	${DAEMON_DIR}/${DAEMON_EXE}
+    fi;
 
     exit 0
 }
@@ -48,6 +77,7 @@ function do_restart()
 	exit 1
     fi
 
+    echo "Restart Redrob daemon"
     kill -${SIG_RESTART_DAEMON} ${PID}
 
     exit 0
@@ -62,6 +92,7 @@ function do_shutdown()
 	exit 1
     fi
 
+    echo "Shutdown Redrob daemon"
     kill -${SIG_TERMINATE_DAEMON} ${PID}
 
     exit 0

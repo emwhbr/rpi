@@ -9,6 +9,7 @@
 // *                                                                      *
 // ************************************************************************
 
+#include <getopt.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,6 +35,7 @@ using namespace std;
 /////////////////////////////////////////////////////////////////////////////
 
 static void daemon_terminate(void);
+static void daemon_parse_command_line(int argc, char *argv[]);
 static void daemon_signal_handler(int sig);
 static void daemon_exit_on_error(int fd_lock_file);
 static void daemon_report_prod_info(void);
@@ -61,15 +63,56 @@ static REDROBD_CONFIG g_config;
 
 static bool g_is_daemon;
 
+static int g_do_shutdown = 1; // Enable/disable system shutdown
+
 ////////////////////////////////////////////////////////////////
 
 static void daemon_terminate(void)
 {
   // Only log this event, no further actions for now
-  syslog_error("Unhandled exception, termination handler activated");
+  syslog_error("Unhandled exception, termination handler activated (shutdown=%s)",
+	       (g_do_shutdown ? "true" : "false"));
+
+  // Initiate system shutdown
+  if (g_do_shutdown) {
+    shutdown_system();
+  }
  
   // The terminate function should not return
   abort();
+}
+
+////////////////////////////////////////////////////////////////
+
+static void daemon_parse_command_line(int argc, char *argv[])
+{
+  int option_index = 0;
+  int c;
+  struct option long_options[] = {
+    {"no_shutdown", no_argument, &g_do_shutdown, 0},
+    {0, 0, 0, 0}
+  };
+
+  while (1) {
+    c = getopt_long(argc, argv, "",
+		    long_options, &option_index);
+    
+    // Detect the end of the options
+    if (c == -1) {
+      break;
+    }
+    
+    switch (c) {
+    case 0:
+      // If option sets a flag, do nothing else now
+      if (long_options[option_index].flag) {
+	break;
+      }
+      break;
+    default:
+      break;
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -92,12 +135,18 @@ static void daemon_signal_handler(int sig)
 
 static void daemon_exit_on_error(int fd_lock_file)
 {
-  syslog_info("Terminated bad");
+  syslog_info("Terminated bad (shutdown=%s)",
+	      (g_do_shutdown ? "true" : "false"));
   syslog_close();
 
   if (fd_lock_file != DAEMON_BAD_FD_LOCK_FILE) {
     close(fd_lock_file);
     unlink(g_config.lock_file);
+  }
+
+  // Initiate system shutdown
+  if (g_do_shutdown) {
+    shutdown_system();
   }
 
   exit(EXIT_FAILURE);
@@ -183,6 +232,9 @@ int main(int argc, char *argv[])
 {
   long rc;
   int fd_lock_file = DAEMON_BAD_FD_LOCK_FILE;
+
+  // Parse command line arguments
+  daemon_parse_command_line(argc, argv);
 
   // Initialize handling of messages sent to system logger
   syslog_open(REDROBD_NAME);
@@ -279,12 +331,18 @@ int main(int argc, char *argv[])
   }
   
   // Cleanup and exit
-  syslog_info("Terminated ok");
+  syslog_info("Terminated ok (shutdown=%s)",
+	      (g_do_shutdown ? "true" : "false"));
   syslog_close();
   
   if (fd_lock_file != DAEMON_BAD_FD_LOCK_FILE) {
     close(fd_lock_file);
     unlink(g_config.lock_file);
+  }
+
+  // Initiate system shutdown
+  if (g_do_shutdown) {
+    shutdown_system();
   }
 
   exit(EXIT_SUCCESS);

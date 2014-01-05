@@ -45,4 +45,6 @@ extern long become_daemon(const char *run_as_user,  // IN
 			  const char *lock_file,    // IN
 			  int *fd_lock_file);       // OUT
 
+extern long shutdown_system(void);
+
 #endif // __DAEMON_UTILITY_H__

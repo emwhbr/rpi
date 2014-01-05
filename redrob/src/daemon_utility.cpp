@@ -261,3 +261,16 @@ long become_daemon(const char *run_as_user,
 
   return DAEMON_SUCCESS;
 }
+
+////////////////////////////////////////////////////////////////
+
+long shutdown_system(void)
+{
+  const char shutdown_cmd[] = "shutdown -h now";
+
+  if ( system(shutdown_cmd) == -1 ) {
+    return DAEMON_FAILURE;
+  }
+
+  return DAEMON_SUCCESS;
+}
