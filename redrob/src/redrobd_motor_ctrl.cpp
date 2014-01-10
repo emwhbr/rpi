@@ -58,18 +58,13 @@ redrobd_motor_ctrl::~redrobd_motor_ctrl(void)
 
 ////////////////////////////////////////////////////////////////
 
-void redrobd_motor_ctrl::initialize(bool continuous_steer)
+void redrobd_motor_ctrl::initialize(void)
 {
   // Set all pins as outputs, save old pin functions
   redrobd_gpio_set_function_out(m_pin_rm_1, m_pin_func_rm_1);
   redrobd_gpio_set_function_out(m_pin_rm_2, m_pin_func_rm_2);
   redrobd_gpio_set_function_out(m_pin_lm_1, m_pin_func_lm_1);
   redrobd_gpio_set_function_out(m_pin_lm_2, m_pin_func_lm_2);
-
-  // Set steer mode
-  m_continuous_steer = continuous_steer;
-  m_previous_code = REDROBD_MC_NONE;
-  m_last_steering = REDROBD_MC_STOP;
 
   // Stop all motors
   steer_stop();
@@ -89,53 +84,24 @@ void redrobd_motor_ctrl::finalize(void)
   redrobd_gpio_set_function(m_pin_lm_2, m_pin_func_lm_2);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+//               Protected member functions
+/////////////////////////////////////////////////////////////////////////////
+
 ////////////////////////////////////////////////////////////////
 
-void redrobd_motor_ctrl::steer(uint16_t code)
+bool redrobd_motor_ctrl::check_steer_code(uint16_t code)
 {
-  if (m_continuous_steer) {
-    // Continuous mode requires a flow of steer codes
-    // No steering equals stop
-    if (code == REDROBD_MC_NONE) {
-      code = REDROBD_MC_STOP;
-    }
-  }
-  else {
-    // Non-continuous mode remembers last steering
-    // No steering equals continue with last steering
-    // Stop is achieved by generating same steer code
-    // after a period of no steering
-    if ( (code != REDROBD_MC_NONE) && 
-	 (code == m_last_steering) &&
-	 (m_previous_code == REDROBD_MC_NONE) ) {
-      code = REDROBD_MC_STOP;
-    }
-    else {
-      if (code != REDROBD_MC_NONE) {
-	m_last_steering = code;
-      }
-      m_previous_code = code;
-    }
-  }
+  bool steer_code_ok = false;
 
   switch (code) {
   case REDROBD_MC_NONE:
-    steer_none();
-    break;
   case REDROBD_MC_STOP:
-    steer_stop();
-    break;
   case REDROBD_MC_FORWARD:
-    steer_forward();
-    break;
   case REDROBD_MC_REVERSE:
-    steer_reverse();
-    break; 
   case REDROBD_MC_RIGHT:
-    steer_right();
-    break;
   case REDROBD_MC_LEFT:
-    steer_left();
+    steer_code_ok = true;
     break;
   default:
     // All other steer codes are ignored for now
@@ -144,25 +110,10 @@ void redrobd_motor_ctrl::steer(uint16_t code)
 	    << hex << setw(4) << setfill('0') << (unsigned)code;
     redrobd_log_writeln(oss_msg.str());
 
-    m_previous_code = REDROBD_MC_NONE;
-    m_last_steering = REDROBD_MC_STOP;
-
-    steer_stop();
+    steer_code_ok = false;
   }
-}
 
-/////////////////////////////////////////////////////////////////////////////
-//               Private member functions
-/////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////
-
-void redrobd_motor_ctrl::init_members(void)
-{
-  m_pin_func_rm_1 = 0;
-  m_pin_func_rm_2 = 0;
-  m_pin_func_lm_1 = 0;
-  m_pin_func_lm_2 = 0;
+  return steer_code_ok;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -234,6 +185,20 @@ void redrobd_motor_ctrl::steer_left(void)
   // Left motor - reverse
   steer_motor(REDROBD_MC_MOTOR_ID_LEFT,
 	      REDROBD_MC_MOTOR_DIR_REVERSE);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+//               Private member functions
+/////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////
+
+void redrobd_motor_ctrl::init_members(void)
+{
+  m_pin_func_rm_1 = 0;
+  m_pin_func_rm_2 = 0;
+  m_pin_func_lm_1 = 0;
+  m_pin_func_lm_2 = 0;
 }
 
 ////////////////////////////////////////////////////////////////

@@ -53,10 +53,20 @@ class redrobd_motor_ctrl {
 
   ~redrobd_motor_ctrl(void);
 
-  void initialize(bool continuous_steer);
+  void initialize(void);
   void finalize(void);
 
-  void steer(uint16_t code);
+  virtual void steer(uint16_t code) = 0; // Pure virtual function
+
+ protected:
+  bool check_steer_code(uint16_t code);
+
+  void steer_none(void);
+  void steer_stop(void);
+  void steer_forward(void);
+  void steer_reverse(void);
+  void steer_right(void);
+  void steer_left(void);
 
  private:
   // GPIO pins
@@ -71,19 +81,7 @@ class redrobd_motor_ctrl {
   uint8_t m_pin_func_lm_1;
   uint8_t m_pin_func_lm_2;
 
-  // Steering mode
-  bool     m_continuous_steer;
-  uint16_t m_previous_code;
-  uint16_t m_last_steering;
-
   void init_members(void);
-
-  void steer_none(void);
-  void steer_stop(void);
-  void steer_forward(void);
-  void steer_reverse(void);
-  void steer_right(void);
-  void steer_left(void);
 
   void steer_motor(REDROBD_MC_MOTOR_ID motor_id,
 		   REDROBD_MC_MOTOR_DIR motor_dir);

@@ -135,8 +135,8 @@ long redrobd_ctrl_thread::setup(void)
     m_remote_ctrl_auto->initialize();
 
     // Check if continuous steering was selected (DIP-switch)
-    bool cont_steering = m_hw_cfg_auto->select_continuous_steering();
-    if (cont_steering) {
+    m_cont_steering = m_hw_cfg_auto->select_continuous_steering();
+    if (m_cont_steering) {
       redrobd_log_writeln(get_name() + " : Continuous steering selected");      
     }
     else {
@@ -144,16 +144,32 @@ long redrobd_ctrl_thread::setup(void)
     }
 
     // Create the motor control object with garbage collector
-    redrobd_motor_ctrl *mc_ptr =
-      new redrobd_motor_ctrl(PIN_L293D_1A,  // Right motor
-			     PIN_L293D_2A,
-			     PIN_L293D_3A,  // Left motor
-			     PIN_L293D_4A);
-
-    m_motor_ctrl_auto = auto_ptr<redrobd_motor_ctrl>(mc_ptr);
+    if (m_cont_steering) {
+      redrobd_mc_cont_steer *mc_ptr =
+	new redrobd_mc_cont_steer(PIN_L293D_1A,  // Right motor
+				  PIN_L293D_2A,
+				  PIN_L293D_3A,  // Left motor
+				  PIN_L293D_4A);
+      
+      m_mc_cont_steer_auto = auto_ptr<redrobd_mc_cont_steer>(mc_ptr);
+    }
+    else {
+      redrobd_mc_non_cont_steer *mc_ptr =
+	new redrobd_mc_non_cont_steer(PIN_L293D_1A,  // Right motor
+				      PIN_L293D_2A,
+				      PIN_L293D_3A,  // Left motor
+				      PIN_L293D_4A);
+      
+      m_mc_non_cont_steer_auto = auto_ptr<redrobd_mc_non_cont_steer>(mc_ptr);
+    }
 
     // Initialize motor control
-    m_motor_ctrl_auto->initialize(cont_steering);
+    if (m_cont_steering) {
+      m_mc_cont_steer_auto->initialize();
+    }
+    else {
+      m_mc_non_cont_steer_auto->initialize();
+    }
 
     // Create the cyclic battery monitor thread object with garbage collector
     redrobd_voltage_monitor_thread *thread_ptr2 =
@@ -245,8 +261,14 @@ long redrobd_ctrl_thread::cleanup(void)
     m_bat_mon_thread_auto.reset();
 
     // Finalize and delete the motor control object
-    m_motor_ctrl_auto->finalize();
-    m_motor_ctrl_auto.reset();
+    if (m_cont_steering) {
+      m_mc_cont_steer_auto->finalize();
+      m_mc_cont_steer_auto.reset();
+    }
+    else {
+      m_mc_non_cont_steer_auto->finalize();
+      m_mc_non_cont_steer_auto.reset();
+    }
 
     // Finalize and delete the remote control object
     m_remote_ctrl_auto->finalize();
@@ -332,23 +354,23 @@ long redrobd_ctrl_thread::cyclic_execute(void)
     // Do motor control
     switch (steering) {
     case REDROBD_RC_NONE:
-       m_motor_ctrl_auto->steer(REDROBD_MC_NONE);
+      motor_control(REDROBD_MC_NONE);
       break;
     case REDROBD_RC_FORWARD:
       redrobd_log_writeln(get_name() + " : steer forward");
-      m_motor_ctrl_auto->steer(REDROBD_MC_FORWARD);
+      motor_control(REDROBD_MC_FORWARD);
       break;
     case REDROBD_RC_REVERSE:
       redrobd_log_writeln(get_name() + " : steer reverse");
-      m_motor_ctrl_auto->steer(REDROBD_MC_REVERSE);
+      motor_control(REDROBD_MC_REVERSE);
       break; 
-    case REDROBD_RC_RIGHT:
+    case REDROBD_RC_RIGHT:      
       redrobd_log_writeln(get_name() + " : steer right");
-      m_motor_ctrl_auto->steer(REDROBD_MC_RIGHT);
+      motor_control(REDROBD_MC_RIGHT);
       break;
     case REDROBD_RC_LEFT:
-      redrobd_log_writeln(get_name() + " : steer left");
-      m_motor_ctrl_auto->steer(REDROBD_MC_LEFT);
+      redrobd_log_writeln(get_name() + " : steer left");   
+      motor_control(REDROBD_MC_LEFT);
       break;
     default:
       // All other steerings are ignored for now
@@ -358,7 +380,7 @@ long redrobd_ctrl_thread::cyclic_execute(void)
 	       << hex << setw(4) << setfill('0') << (unsigned)steering;
        redrobd_log_writeln(oss_msg.str());
 
-       m_motor_ctrl_auto->steer(REDROBD_MC_STOP);
+       motor_control(REDROBD_MC_STOP); 
     }
 
     return THREAD_SUCCESS;
@@ -381,12 +403,22 @@ long redrobd_ctrl_thread::cyclic_execute(void)
 
 void redrobd_ctrl_thread::init_members(void)
 {
+  m_alive_thread_auto.reset();
+  m_bat_mon_thread_auto.reset();
+  m_remote_ctrl_auto.reset();
+  m_mc_cont_steer_auto.reset();
+  m_mc_non_cont_steer_auto.reset();
+
   m_mcp3008_io_ptr = NULL;
+
+  m_hw_cfg_auto.reset();
 
   m_battery_check_allowed = false;
   m_battery_low_detected  = false;
 
   m_shutdown_select = false;
+
+  m_cont_steering = false;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -465,4 +497,17 @@ void redrobd_ctrl_thread::check_thread_run_status(void)
   // Give back ownership to auto_ptr
   m_bat_mon_thread_auto =
     auto_ptr<redrobd_voltage_monitor_thread>(thread_ptr2);
+}
+
+
+////////////////////////////////////////////////////////////////
+
+void redrobd_ctrl_thread::motor_control(uint16_t steer_code)
+{
+  if (m_cont_steering) {
+    m_mc_cont_steer_auto->steer(steer_code);
+  }
+  else {
+    m_mc_non_cont_steer_auto->steer(steer_code);
+  }
 }

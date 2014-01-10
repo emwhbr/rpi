@@ -51,6 +51,8 @@ DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/redrobd_led.o \
               $(OBJ_DIR)/redrobd_remote_ctrl.o \
               $(OBJ_DIR)/redrobd_motor_ctrl.o \
+              $(OBJ_DIR)/redrobd_mc_cont_steer.o \
+              $(OBJ_DIR)/redrobd_mc_non_cont_steer.o \
               $(OBJ_DIR)/rpi_gpio.o \
               $(OBJ_DIR)/redrobd_hw_cfg.o \
               $(OBJ_DIR)/mcp3008_io.o \

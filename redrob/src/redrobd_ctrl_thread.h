@@ -18,7 +18,8 @@
 #include "redrobd_alive_thread.h"
 #include "redrobd_voltage_monitor_thread.h"
 #include "redrobd_remote_ctrl.h"
-#include "redrobd_motor_ctrl.h"
+#include "redrobd_mc_cont_steer.h"
+#include "redrobd_mc_non_cont_steer.h"
 #include "mcp3008_io.h"
 #include "redrobd_hw_cfg.h"
 #include "timer.h"
@@ -52,8 +53,11 @@ class redrobd_ctrl_thread : public cyclic_thread {
   // Remote control object
   auto_ptr<redrobd_remote_ctrl> m_remote_ctrl_auto;
 
-  // Motor control object
-  auto_ptr<redrobd_motor_ctrl> m_motor_ctrl_auto;
+  // Motor control object (continuous steer)
+  auto_ptr<redrobd_mc_cont_steer> m_mc_cont_steer_auto;
+
+  // Motor control object (non-continuous steer)
+  auto_ptr<redrobd_mc_non_cont_steer> m_mc_non_cont_steer_auto;
 
   // A/D Converter object pointer
   mcp3008_io *m_mcp3008_io_ptr;
@@ -69,11 +73,16 @@ class redrobd_ctrl_thread : public cyclic_thread {
   // Controls shutdown
   bool m_shutdown_select;
 
+  // Controls type of motor control
+  bool m_cont_steering;
+
   void init_members(void);
 
   bool battery_voltage_ok(void);
 
   void check_thread_run_status(void);
+
+  void motor_control(uint16_t steer_code);
 };
 
 #endif // __REDROBD_CTRL_THREAD_H__
