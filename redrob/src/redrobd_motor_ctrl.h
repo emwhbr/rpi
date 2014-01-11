@@ -61,7 +61,6 @@ class redrobd_motor_ctrl {
  protected:
   bool check_steer_code(uint16_t code);
 
-  void steer_none(void);
   void steer_stop(void);
   void steer_forward(void);
   void steer_reverse(void);

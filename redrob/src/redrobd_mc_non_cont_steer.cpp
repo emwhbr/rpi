@@ -63,7 +63,6 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
     ////////////////////////////////////////////////////
     switch (code) {
     case REDROBD_MC_NONE:
-      steer_none();
       next_state = MC_STATE_INIT;
       break;
     case REDROBD_MC_STOP:
@@ -83,8 +82,8 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
       next_state = MC_STATE_RIGHT;
       break;
     case REDROBD_MC_LEFT:
-      steer_none();
-      next_state = MC_STATE_INIT;
+      steer_left();
+      next_state = MC_STATE_LEFT;
     }
     break;
     /////////////////////////////////////////////////////
@@ -92,30 +91,38 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
     /////////////////////////////////////////////////////
     switch (code) {
     case REDROBD_MC_NONE:
-      steer_none();
-      m_last_steering = REDROBD_MC_FORWARD;
-      m_last_memory_state_code = REDROBD_MC_FORWARD;
-      m_memory_state_done = false;
-      next_state = MC_STATE_MEMORY;
+      m_memory_steer = true;
+      next_state = MC_STATE_FORWARD;
       break;
     case REDROBD_MC_STOP:
       steer_stop();
+      m_memory_steer = false;
       next_state = MC_STATE_STOP;
       break;
     case REDROBD_MC_FORWARD:
-      steer_none();
-      next_state = MC_STATE_FORWARD;
+      if (m_memory_steer) {
+	steer_stop();
+	m_last_steering = code;
+	next_state = MC_STATE_STOP;
+      }
+      else {
+	steer_forward();
+	next_state = MC_STATE_FORWARD;
+      }
       break;
     case REDROBD_MC_REVERSE:
       steer_reverse();
+      m_memory_steer = false;
       next_state = MC_STATE_REVERSE;
       break;
     case REDROBD_MC_RIGHT:
       steer_right();
+      m_memory_steer = false;
       next_state = MC_STATE_RIGHT;
       break;
     case REDROBD_MC_LEFT:
       steer_left();
+      m_memory_steer = false;
       next_state = MC_STATE_LEFT;
     }
     break;
@@ -124,30 +131,38 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
     /////////////////////////////////////////////////////
     switch (code) {
     case REDROBD_MC_NONE:
-      steer_none();
-      m_last_steering = REDROBD_MC_REVERSE;
-      m_last_memory_state_code = REDROBD_MC_REVERSE;
-      m_memory_state_done = false;
-      next_state = MC_STATE_MEMORY;
+      m_memory_steer = true;
+      next_state = MC_STATE_REVERSE;
       break;
     case REDROBD_MC_STOP:
       steer_stop();
+      m_memory_steer = false;
       next_state = MC_STATE_STOP;
       break;
     case REDROBD_MC_FORWARD:
       steer_forward();
+      m_memory_steer = false;
       next_state = MC_STATE_FORWARD;
       break;
     case REDROBD_MC_REVERSE:
-      steer_none();
-      next_state = MC_STATE_REVERSE;
+      if (m_memory_steer) {
+	steer_stop();
+	m_last_steering = code;
+	next_state = MC_STATE_STOP;
+      }
+      else {
+	steer_reverse();
+	next_state = MC_STATE_REVERSE;
+      }
       break;
     case REDROBD_MC_RIGHT:
       steer_right();
+      m_memory_steer = false;
       next_state = MC_STATE_RIGHT;
       break;
     case REDROBD_MC_LEFT:
       steer_left();
+      m_memory_steer = false;
       next_state = MC_STATE_LEFT;
     }
     break;
@@ -156,31 +171,39 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
     /////////////////////////////////////////////////////
     switch (code) {
     case REDROBD_MC_NONE:
-      steer_none();
-      m_last_steering = REDROBD_MC_LEFT;
-      m_last_memory_state_code = REDROBD_MC_LEFT;
-      m_memory_state_done = false;
-      next_state = MC_STATE_MEMORY;
+      m_memory_steer = true;
+      next_state = MC_STATE_LEFT;
       break;
     case REDROBD_MC_STOP:
       steer_stop();
+      m_memory_steer = false;
       next_state = MC_STATE_STOP;
       break;
     case REDROBD_MC_FORWARD:
       steer_forward();
+      m_memory_steer = false;
       next_state = MC_STATE_FORWARD;
       break;
     case REDROBD_MC_REVERSE:
       steer_reverse();
+      m_memory_steer = false;
       next_state = MC_STATE_REVERSE;
       break;
     case REDROBD_MC_RIGHT:
       steer_right();
+      m_memory_steer = false;
       next_state = MC_STATE_RIGHT;
       break;
     case REDROBD_MC_LEFT:
-      steer_none();
-      next_state = MC_STATE_LEFT;
+      if (m_memory_steer) {
+	steer_stop();
+	m_last_steering = code;
+	next_state = MC_STATE_STOP;
+      }
+      else {
+	steer_left();
+	next_state = MC_STATE_LEFT;
+      }
     }    
     break;
     /////////////////////////////////////////////////////
@@ -188,75 +211,29 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
     /////////////////////////////////////////////////////
     switch (code) {
     case REDROBD_MC_NONE:
-      steer_none();
-      m_last_steering = REDROBD_MC_RIGHT;
-      m_last_memory_state_code = REDROBD_MC_RIGHT;
-      m_memory_state_done = false;
-      next_state = MC_STATE_MEMORY;
+      m_memory_steer = true;
+      next_state = MC_STATE_RIGHT;
       break;
     case REDROBD_MC_STOP:
       steer_stop();
+      m_memory_steer = false;
       next_state = MC_STATE_STOP;
       break;
     case REDROBD_MC_FORWARD:
       steer_forward();
+      m_memory_steer = false;
       next_state = MC_STATE_FORWARD;
       break;
     case REDROBD_MC_REVERSE:
       steer_reverse();
+      m_memory_steer = false;
       next_state = MC_STATE_REVERSE;
       break;
     case REDROBD_MC_RIGHT:
-      steer_none();
-      next_state = MC_STATE_RIGHT;
-      break;
-    case REDROBD_MC_LEFT:
-      steer_left();
-      next_state = MC_STATE_LEFT;
-    }    
-    break;
-    /////////////////////////////////////////////////////
-  case MC_STATE_MEMORY:
-    /////////////////////////////////////////////////////
-    switch (code) {
-    case REDROBD_MC_NONE:
-      steer_none();
-      if (m_last_memory_state_code == REDROBD_MC_NONE) {
-	m_memory_state_done = true;
-      }
-      next_state = MC_STATE_MEMORY;
-      break;
-    case REDROBD_MC_STOP:
-      steer_stop();
-      next_state = MC_STATE_STOP;
-      break;
-    case REDROBD_MC_FORWARD:
-      if ( (m_last_steering == REDROBD_MC_FORWARD) &&
-	   (!m_memory_state_done) ) {
+      if (m_memory_steer) {
 	steer_stop();
-	next_state = MC_STATE_MEMORY;
-      }
-      else {
-	steer_forward();
-	next_state = MC_STATE_FORWARD;
-      }
-      break;
-    case REDROBD_MC_REVERSE:
-      if ( (m_last_steering == REDROBD_MC_REVERSE) &&
-	   (!m_memory_state_done) ) {
-	steer_stop();
-	next_state = MC_STATE_MEMORY;
-      }
-      else {
-	steer_reverse();
-	next_state = MC_STATE_REVERSE;
-      }
-      break;
-    case REDROBD_MC_RIGHT:
-      if ( (m_last_steering == REDROBD_MC_RIGHT) &&
-	   (!m_memory_state_done) ) {
-	steer_stop();
-	next_state = MC_STATE_MEMORY;
+	m_last_steering = code;
+	next_state = MC_STATE_STOP;
       }
       else {
 	steer_right();
@@ -264,42 +241,40 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
       }
       break;
     case REDROBD_MC_LEFT:
-      if ( (m_last_steering == REDROBD_MC_LEFT) &&
-	   (!m_memory_state_done) ) {
-	steer_stop();
-	next_state = MC_STATE_MEMORY;
-      }
-      else {
-	steer_left();
-	next_state = MC_STATE_LEFT;
-      }
-    }
-    m_last_memory_state_code = code;
+      steer_left();
+      m_memory_steer = false;
+      next_state = MC_STATE_LEFT;
+    }    
     break;
     /////////////////////////////////////////////////////
   case MC_STATE_STOP:
     /////////////////////////////////////////////////////
-    switch (code) {
-    case REDROBD_MC_NONE:
-    case REDROBD_MC_STOP:
-      steer_none();
+    if (m_memory_steer && (code == m_last_steering)) {      
       next_state = MC_STATE_STOP;
-      break;
-    case REDROBD_MC_FORWARD:
-      steer_forward();
-      next_state = MC_STATE_FORWARD;
-      break;
-    case REDROBD_MC_REVERSE:
-      steer_reverse();
-      next_state = MC_STATE_REVERSE;
-      break;
-    case REDROBD_MC_RIGHT:
-      steer_right();
-      next_state = MC_STATE_RIGHT;
-      break;
-    case REDROBD_MC_LEFT:
-      steer_left();
-      next_state = MC_STATE_LEFT;
+    }
+    else {
+      m_memory_steer = false;
+      switch (code) {
+      case REDROBD_MC_NONE:
+      case REDROBD_MC_STOP:
+	next_state = MC_STATE_STOP;
+	break;
+      case REDROBD_MC_FORWARD:
+	steer_forward();
+	next_state = MC_STATE_FORWARD;
+	break;
+      case REDROBD_MC_REVERSE:
+	steer_reverse();
+	next_state = MC_STATE_REVERSE;
+	break;
+      case REDROBD_MC_RIGHT:
+	steer_right();
+	next_state = MC_STATE_RIGHT;
+	break;
+      case REDROBD_MC_LEFT:
+	steer_left();
+	next_state = MC_STATE_LEFT;
+      }
     }
     break;
   }
@@ -314,9 +289,8 @@ void redrobd_mc_non_cont_steer::steer(uint16_t code)
 ////////////////////////////////////////////////////////////////
 
 void redrobd_mc_non_cont_steer::init_members(void)
-{
-  m_last_steering = REDROBD_MC_NONE;
+{  
   m_current_state = MC_STATE_INIT;
-  m_last_memory_state_code = REDROBD_MC_NONE;
-  m_memory_state_done = false;
+  m_last_steering = REDROBD_MC_NONE;
+  m_memory_steer = false;
 }

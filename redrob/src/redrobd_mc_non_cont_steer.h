@@ -24,7 +24,6 @@ typedef enum {MC_STATE_INIT,
 	      MC_STATE_REVERSE,
 	      MC_STATE_LEFT,
 	      MC_STATE_RIGHT,
-	      MC_STATE_MEMORY,
 	      MC_STATE_STOP} MC_STATE;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -45,11 +44,10 @@ class redrobd_mc_non_cont_steer : public redrobd_motor_ctrl {
   virtual void steer(uint16_t code);
 
  private:
-  // Keep track of the state machine
-  uint16_t m_last_steering;
+  // Keep track of the state machine  
   MC_STATE m_current_state;
-  uint16_t m_last_memory_state_code;
-  bool     m_memory_state_done;
+  uint16_t m_last_steering;
+  bool     m_memory_steer;
 
   void init_members(void);
 };

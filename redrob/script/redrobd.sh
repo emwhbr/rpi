@@ -18,6 +18,9 @@ SIG_TERMINATE_DAEMON="SIGTERM"
 
 GPIO_PIN_START_DISABLED="4"
 
+SPI_DRIVER="spi_bcm2708"
+GPIO_PIN_SPI_CE0="8"
+
 ################################################################
 function is_start_disabled()
 ################################################################
@@ -34,6 +37,27 @@ function is_start_disabled()
 
     echo ${pin_value}
     return 0
+}
+
+################################################################
+function prepare_spi()
+################################################################
+{
+    # Unload any SPI driver
+    modprobe -r ${SPI_DRIVER}
+
+    # Load SPI driver
+    modprobe ${SPI_DRIVER}
+
+    # SPI pin CE0 shall be used as GPIO (motor control).
+    # Set pin as input to avoid any initial unwanted steering.
+    
+    # Set pin as input
+    echo "${GPIO_PIN_SPI_CE0}" > /sys/class/gpio/export
+    echo "in"  > /sys/class/gpio/gpio${GPIO_PIN_SPI_CE0}/direction
+
+    # Restore pin
+    echo "${GPIO_PIN_SPI_CE0}" > /sys/class/gpio/unexport
 }
 
 ################################################################
@@ -56,6 +80,9 @@ function do_start()
 {
     # Check if start is disabled by GPIO pin
     start_disabled=`is_start_disabled`
+
+    # Prepare SPI (driver and GPIO pins)
+    prepare_spi
 
     # Start daemon
     if [ $start_disabled -eq 1 ]; then

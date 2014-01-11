@@ -50,14 +50,9 @@ void redrobd_mc_cont_steer::steer(uint16_t code)
 
   // Continuous mode requires a flow of steer codes
   // No steering equals stop
-  if (code == REDROBD_MC_NONE) {
-    code = REDROBD_MC_STOP;
-  }
 
   switch (code) {
   case REDROBD_MC_NONE:
-    steer_none();
-    break;
   case REDROBD_MC_STOP:
     steer_stop();
     break;

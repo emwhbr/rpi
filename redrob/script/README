@@ -1,0 +1,6 @@
+FILE			PATH ON RPI TARGET
+-----------------------------------------------------------
+modules			/etc/modules
+raspi-blacklist.conf	/export/rpi/raspi-blacklist.conf
+rc.local		/etc/rc.local
+redrobd.sh		/proj/redrob/redrobd.sh

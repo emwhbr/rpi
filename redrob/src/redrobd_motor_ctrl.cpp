@@ -118,12 +118,6 @@ bool redrobd_motor_ctrl::check_steer_code(uint16_t code)
 
 ////////////////////////////////////////////////////////////////
 
-void redrobd_motor_ctrl::steer_none(void)
-{
-}
-
-////////////////////////////////////////////////////////////////
-
 void redrobd_motor_ctrl::steer_stop(void)
 {
   // Right motor - stop
