@@ -193,6 +193,7 @@ static int daemon_get_config(REDROBD_CONFIG *config)
   oss_msg << "\tlog_stdout:" << config->log_stdout  << "\\n";
   oss_msg << "\tsup_freq  :" << config->supervision_freq << "\\n";
   oss_msg << "\tctrl_freq :" << config->ctrl_thread_freq << "\n";
+  oss_msg << "\tverbose   :" << config->verbose << "\n";
 
   // Print all info
   syslog_info(oss_msg.str().c_str());
@@ -282,7 +283,8 @@ int main(int argc, char *argv[])
   // Initialize daemon
   if (redrobd_initialize(g_config.log_file,
 			 (!g_is_daemon) && g_config.log_stdout,
-			 g_config.ctrl_thread_freq) != REDROBD_SUCCESS) {
+			 g_config.ctrl_thread_freq,
+			 g_config.verbose) != REDROBD_SUCCESS) {
     daemon_exit_on_error(fd_lock_file);
   }
 
@@ -303,7 +305,8 @@ int main(int argc, char *argv[])
       // Initialize
       if (redrobd_initialize(g_config.log_file,
 			     (!g_is_daemon) && g_config.log_stdout,
-			     g_config.ctrl_thread_freq) != REDROBD_SUCCESS) {
+			     g_config.ctrl_thread_freq,
+			     g_config.verbose) != REDROBD_SUCCESS) {
 	daemon_exit_on_error(fd_lock_file);
       }
     }

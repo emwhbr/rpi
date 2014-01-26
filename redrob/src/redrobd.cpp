@@ -53,11 +53,13 @@ long redrobd_check_run_status(void)
 
 long redrobd_initialize(const char *logfile,
 			bool log_stdout,
-			double ctrl_thread_frequency)
+			double ctrl_thread_frequency,
+			bool verbose)
 {
   return g_object.initialize(logfile,
 			     log_stdout,
-			     ctrl_thread_frequency);
+			     ctrl_thread_frequency,
+			     verbose);
 }
 
 ////////////////////////////////////////////////////////////////

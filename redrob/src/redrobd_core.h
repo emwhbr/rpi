@@ -41,7 +41,8 @@ public:
 
   long initialize(string logfile,
 		  bool log_stdout,
-		  double ctrl_thread_frequency);
+		  double ctrl_thread_frequency,
+		  bool verbose);
 
   long finalize(void);
 
@@ -72,7 +73,8 @@ private:
 
   void internal_initialize(string logfile,
 			   bool log_stdout,
-			   double ctrl_thread_frequency);
+			   double ctrl_thread_frequency,
+			   bool verbose);
 
   void internal_finalize(void);  
 };

@@ -49,9 +49,12 @@
 
 redrobd_ctrl_thread::
 redrobd_ctrl_thread(string thread_name,
-		    double frequency) : cyclic_thread(thread_name,
-						      frequency)
+		    double frequency,
+		    bool verbose) : cyclic_thread(thread_name,
+						  frequency)
 {
+  m_verbose = verbose;
+
   init_members();
 }
 
@@ -339,10 +342,11 @@ long redrobd_ctrl_thread::cyclic_execute(void)
     }
 
     // Check battery voltage
-    if ( (!m_battery_low_detected) && (!battery_voltage_ok()) ) {
-      redrobd_log_writeln(get_name() + " : Low battery voltage detected");
-      redrobd_led_bat_low(true);     // Turn status LED on     
-      m_battery_low_detected = true; // Only signal once
+    if ( !battery_voltage_ok() ) {
+      redrobd_led_bat_low(true);   // Turn status LED on
+    }
+    else {
+      redrobd_led_bat_low(false);  // Turn status LED off
     }
 
     // Check state and status of created threads
@@ -357,19 +361,27 @@ long redrobd_ctrl_thread::cyclic_execute(void)
       motor_control(REDROBD_MC_NONE);
       break;
     case REDROBD_RC_FORWARD:
-      redrobd_log_writeln(get_name() + " : steer forward");
+      if (m_verbose) {
+	redrobd_log_writeln(get_name() + " : steer forward");
+      }
       motor_control(REDROBD_MC_FORWARD);
       break;
     case REDROBD_RC_REVERSE:
-      redrobd_log_writeln(get_name() + " : steer reverse");
+      if (m_verbose) {
+	redrobd_log_writeln(get_name() + " : steer reverse");
+      }
       motor_control(REDROBD_MC_REVERSE);
       break; 
     case REDROBD_RC_RIGHT:      
-      redrobd_log_writeln(get_name() + " : steer right");
+      if (m_verbose) {
+	redrobd_log_writeln(get_name() + " : steer right");
+      }
       motor_control(REDROBD_MC_RIGHT);
       break;
     case REDROBD_RC_LEFT:
-      redrobd_log_writeln(get_name() + " : steer left");   
+      if (m_verbose) {
+	redrobd_log_writeln(get_name() + " : steer left");
+      }
       motor_control(REDROBD_MC_LEFT);
       break;
     default:
@@ -414,7 +426,6 @@ void redrobd_ctrl_thread::init_members(void)
   m_hw_cfg_auto.reset();
 
   m_battery_check_allowed = false;
-  m_battery_low_detected  = false;
 
   m_shutdown_select = false;
 

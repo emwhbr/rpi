@@ -88,6 +88,9 @@ function do_start()
     if [ $start_disabled -eq 1 ]; then
 	echo "Start Redrob daemon - disabled by GPIO pin ${GPIO_PIN_START_DISABLED}"
     else
+	# Turn on corefiles with unlimited size
+	ulimit -c unlimited
+
 	echo "Start Redrob daemon"
 	${DAEMON_DIR}/${DAEMON_EXE}
     fi;

@@ -34,7 +34,8 @@ class redrobd_ctrl_thread : public cyclic_thread {
 
  public:
   redrobd_ctrl_thread(string thread_name,
-		      double frequency);
+		      double frequency,
+		      bool verbose);
   ~redrobd_ctrl_thread(void);
 
  protected:
@@ -44,6 +45,9 @@ class redrobd_ctrl_thread : public cyclic_thread {
   virtual long cyclic_execute(void); // Implements pure virtual function from base class
     
  private:
+  // Full verbose logging
+  bool m_verbose;
+
   // The alive thread object
   auto_ptr<redrobd_alive_thread> m_alive_thread_auto;
 
@@ -68,7 +72,6 @@ class redrobd_ctrl_thread : public cyclic_thread {
   // Controls battery check
   timer m_battery_check_timer;
   bool  m_battery_check_allowed;
-  bool  m_battery_low_detected;
 
   // Controls shutdown
   bool m_shutdown_select;

@@ -25,6 +25,7 @@
 #define LOG_STDOUT         "log_stdout"
 #define SUPERVISION_FREQ   "supervision_freq"
 #define CTRL_THREAD_FREQ   "ctrl_thread_freq"
+#define VERBOSE            "verbose"
 
 // Default configuration values
 #define DEF_DAEMONIZE           true
@@ -35,6 +36,7 @@
 #define DEF_LOG_STDOUT          false
 #define DEF_SUPERVISION_FREQ    1.0  // Hz
 #define DEF_CTRL_THREAD_FREQ    10.0 // Hz
+#define DEF_VERBOSE             false
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
@@ -57,6 +59,7 @@ redrobd_cfg_file::redrobd_cfg_file(string file_name) : cfg_file(file_name)
   set_default_item_value(LOG_STDOUT, bool(DEF_LOG_STDOUT), boolalpha);
   set_default_item_value(SUPERVISION_FREQ, double(DEF_SUPERVISION_FREQ), dec);
   set_default_item_value(CTRL_THREAD_FREQ, double(DEF_CTRL_THREAD_FREQ), dec);
+  set_default_item_value(VERBOSE, bool(DEF_VERBOSE), boolalpha);
 
   /*
     Example on how to use hex/dec integers   
@@ -125,4 +128,11 @@ long redrobd_cfg_file::get_supervision_freq(double &value)
 long redrobd_cfg_file::get_ctrl_thread_freq(double &value)
 {
   return get_item_value(CTRL_THREAD_FREQ, value);
+}
+
+////////////////////////////////////////////////////////////////
+
+long redrobd_cfg_file::get_verbose(bool &value)
+{
+  return get_item_value(VERBOSE, value);
 }

@@ -34,6 +34,7 @@ class redrobd_cfg_file : public cfg_file {
   long get_log_stdout(bool &value);
   long get_supervision_freq(double &value);
   long get_ctrl_thread_freq(double &value);
+  long get_verbose(bool &value);
 };
 
 #endif // __REDROBD_CFG_FILE_H__

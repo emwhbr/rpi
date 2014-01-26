@@ -24,7 +24,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "REDROBD"
-#define RSTATE           "R1A07"
+#define RSTATE           "R1A08"
 
 #ifndef REDROBD_CFG_FILE
 #define CFG_FILE "/proj/redrob/"REDROBD_NAME".cfg"
@@ -158,7 +158,8 @@ long redrobd_core::check_run_status(void)
 
 long redrobd_core::initialize(string logfile,
 			      bool log_stdout,
-			      double ctrl_thread_frequency)
+			      double ctrl_thread_frequency,
+			      bool verbose)
 {
   try {
     MUTEX_LOCK(m_init_mutex);
@@ -179,7 +180,8 @@ long redrobd_core::initialize(string logfile,
     // Do the actual initialization
     internal_initialize(logfile,
 			log_stdout,
-			ctrl_thread_frequency);
+			ctrl_thread_frequency,
+			verbose);
 
     // Initialization completed
     m_initialized = true;
@@ -372,6 +374,13 @@ long redrobd_core::internal_get_config(REDROBD_CONFIG *config)
     THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_CFG_FILE_UNEXCPECTED_ERROR,
 	      "Unexpected error(%ld) get_ctrl_thread_freq", rc);
   }
+  bool verbose;
+  rc = cfg_f->get_verbose(verbose);
+  if (rc != CFG_FILE_SUCCESS) {
+    delete cfg_f;
+    THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_CFG_FILE_UNEXCPECTED_ERROR,
+	      "Unexpected error(%ld) get_verbose", rc);
+  }
   
   // Copy configuration values to caller
   config->daemonize = daemonize;
@@ -382,6 +391,7 @@ long redrobd_core::internal_get_config(REDROBD_CONFIG *config)
   config->log_stdout = log_stdout;
   config->supervision_freq = s_freq;
   config->ctrl_thread_freq = wt_freq;
+  config->verbose = verbose;
   
   delete cfg_f;
 
@@ -416,7 +426,8 @@ void redrobd_core::internal_check_run_status(void)
 
 void redrobd_core::internal_initialize(string logfile,
 				       bool log_stdout,
-				       double ctrl_thread_frequency)
+				       double ctrl_thread_frequency,
+				       bool verbose)
 {
   // Initialize the logfile singleton object
   redrobd_log_initialize(logfile, log_stdout);
@@ -432,7 +443,8 @@ void redrobd_core::internal_initialize(string logfile,
   // Create the cyclic control thread object with garbage collector
   redrobd_ctrl_thread *thread_ptr = 
     new redrobd_ctrl_thread(CTRL_THREAD_NAME,
-			    ctrl_thread_frequency);
+			    ctrl_thread_frequency,
+			    verbose);
   m_ctrl_thread_auto =
     auto_ptr<redrobd_ctrl_thread>(thread_ptr);
 

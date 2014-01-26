@@ -75,7 +75,7 @@ void redrobd_thread_initialize_cyclic(cyclic_thread *ct,
 	      ct->get_name().c_str());
   }
 
-   // Step 4: Wait for thread to start executing
+  // Step 4: Wait for thread to start executing
   thread_timeout = true;
   if ( thread_timer.reset() != TIMER_SUCCESS ) {
     THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
@@ -125,6 +125,15 @@ void redrobd_thread_finalize_cyclic(cyclic_thread *ct,
   if ( ct->wait_timed(ct_stop_timeout) != THREAD_SUCCESS ) {
     THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_THREAD_OPERATION_FAILED,
 	      "Error wait_timed thread %s, status:0x%x, state:%u",
+	      ct->get_name().c_str(),
+	      ct->get_status(),
+	      ct->get_state());
+  }
+
+  // Step 3: Check final status
+  if ( ct->get_status() != THREAD_STATUS_OK ) {
+    THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_THREAD_OPERATION_FAILED,
+	      "Error finalize thread %s, status:0x%x, state:%u",
 	      ct->get_name().c_str(),
 	      ct->get_status(),
 	      ct->get_state());

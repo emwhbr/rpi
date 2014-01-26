@@ -77,6 +77,7 @@ typedef struct {
   bool           log_stdout;
   double         supervision_freq;
   double         ctrl_thread_freq;
+  bool           verbose;
 } REDROBD_CONFIG;
 
 /****************************************************************************
@@ -148,6 +149,7 @@ extern long redrobd_check_run_status(void);
 * Parameters logfile                IN  Path to daemon internal log file
 *            log_stdout             IN  Controls if internal log to STDOUT
 *            ctrl_thread_frequency  IN  Frequency (Hz) of control thread
+*            verbose                IN  Full verbose logging enable
 *
 * Error handling Returns REDROBD_SUCCESS if successful
 *                otherwise REDROBD_FAILURE or REDROBD_MUTEX_FAILURE
@@ -155,7 +157,8 @@ extern long redrobd_check_run_status(void);
 ****************************************************************************/
 extern long redrobd_initialize(const char *logfile,
 			       bool log_stdout,
-			       double ctrl_thread_frequency);
+			       double ctrl_thread_frequency,
+			       bool verbose);
 
 /****************************************************************************
 *
