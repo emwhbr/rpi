@@ -127,10 +127,10 @@ long redrobd_ctrl_thread::setup(void)
 
     // Create the remote control object with garbage collector
     redrobd_remote_ctrl *rc_ptr =
-      new redrobd_remote_ctrl(PIN_RF_IN_0,  // Forward
-			      PIN_RF_IN_1,  // Reverse
-			      PIN_RF_IN_2,  // Right
-			      PIN_RF_IN_3); // Left
+      new redrobd_remote_ctrl(PIN_RF_IN_3,  // Forward
+			      PIN_RF_IN_2,  // Reverse
+			      PIN_RF_IN_0,  // Right
+			      PIN_RF_IN_1); // Left
 
     m_remote_ctrl_auto = auto_ptr<redrobd_remote_ctrl>(rc_ptr);
 
