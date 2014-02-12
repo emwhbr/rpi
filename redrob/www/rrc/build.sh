@@ -37,33 +37,45 @@ case "$1" in
 
     deploy)
 	echo "==[DEPLOY]==="
-	cp -r ${CLASS_DIR}/*      ${DEPLOY_DIR}
-	cp ${HTML_DIR}/index.html ${DEPLOY_DIR}
-	cp ${RES_DIR}/*.png       ${DEPLOY_DIR}	
+	cp -r ${CLASS_DIR}/*.class ${DEPLOY_DIR}
+	cp -r ${CLASS_DIR}/redrob  ${DEPLOY_DIR}
+	cp ${HTML_DIR}/index.html  ${DEPLOY_DIR}
+	cp ${RES_DIR}/*.png        ${DEPLOY_DIR}	
 	;;
 
     deploy_jar)
 	echo "==[DEPLOY-JAR]==="
-	cp -r ${CLASS_DIR}/* ${DEPLOY_JAR_DIR}
-	cp ${RES_DIR}/*.png  ${DEPLOY_JAR_DIR}
+	cp -r ${CLASS_DIR}/*.class ${DEPLOY_JAR_DIR}
+	cp -r ${CLASS_DIR}/redrob  ${DEPLOY_JAR_DIR}
+	cp ${RES_DIR}/*.png        ${DEPLOY_JAR_DIR}
 	jar cvf0e /tmp/rrc.jar AppletRrc -C ${DEPLOY_JAR_DIR} .
-	rm -rf ${DEPLOY_JAR_DIR}/*
+	rm -rf ${DEPLOY_JAR_DIR}/*.html
+	rm -rf ${DEPLOY_JAR_DIR}/*.jar
+	rm -rf ${DEPLOY_JAR_DIR}/*.html
+	rm -rf ${DEPLOY_JAR_DIR}/*.class
+	rm -rf ${DEPLOY_JAR_DIR}/*.png
+	rm -rf ${DEPLOY_JAR_DIR}/redrob
 	mv /tmp/rrc.jar ${DEPLOY_JAR_DIR}/
 	cp ${HTML_DIR}/index_jar.html ${DEPLOY_JAR_DIR}/index.html	
 	;;
 
     clean)
         echo "==[CLEAN]==="
-	rm -rf ./*~        	
-	rm -rf ${CLASS_DIR}/*
-	rm -rf ${DEPLOY_DIR}/*
-	rm -rf ${DEPLOY_JAR_DIR}/*
+	rm -rf ./*~      	
+	rm -rf ${CLASS_DIR}/*.class
+	rm -rf ${CLASS_DIR}/redrob	
+	rm -rf ${DEPLOY_DIR}/*.html
+	rm -rf ${DEPLOY_DIR}/*.class
+	rm -rf ${DEPLOY_DIR}/*.png
+	rm -rf ${DEPLOY_DIR}/redrob
+	rm -rf ${DEPLOY_JAR_DIR}/*.html
+	rm -rf ${DEPLOY_JAR_DIR}/*.jar
 	rm -rf ${HTML_DIR}/*~
 	rm -rf ${JAVA_DIR}/*~
 	rm -rf ${RES_DIR}/*~
 	rm -rf ${SIM_DIR}/*~
 	rm -rf ${SIM_DIR}/java/*~
-	rm -rf ${SIM_DIR}/class/*
+	rm -rf ${SIM_DIR}/class/*.class
         ;;
 
     *)
