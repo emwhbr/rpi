@@ -1,0 +1,67 @@
+Required software
+-----------------
+pcre-8.34.tar.gz	http://www.lighttpd.net/
+lighttpd-1.4.34.tar.gz	http://www.pcre.org/
+
+Cross toolchain	prefix	arm-unknown-linux-gnueabihf
+
+Ensure that PATH variable is updated to include
+path to cross toolchain on host.
+
+1. Create build/install directories on host
+-------------------------------------------
+In this instruction I assume the following base path:
+/proj/rpi/redrob/www/
+
+You will need to change this in the commands to match
+your actual directory setup.
+
+mkdir -pv /proj/rpi/redrob/www/install
+
+2. Build PCRE for ARM
+---------------------
+cd /proj/rpi/redrob/www/
+tar xvf <path-to-downloaded-packages>/pcre-8.34.tar.gz 
+cd pcre-8.34
+
+./configure --host=arm-unknown-linux-gnueabihf \
+            --prefix=/proj/rpi/redrob/www/install
+make
+make install
+
+This should build PCRE and install files into the
+following directory: /proj/rpi/redrob/www/install
+
+3. Build LIGHTTPD for ARM
+-------------------------
+cd /proj/rpi/redrob/www/
+tar xvf <path-to-downloaded-packages>/lighttpd-1.4.34.tar.gz
+cd lighttpd-1.4.34
+
+./configure --host=arm-unknown-linux-gnueabihf \
+             --without-zlib --without-bzip2 --disable-ipv6 \
+             --prefix=/proj/rpi/redrob/www/install \
+             PCRECONFIG=/proj/rpi/redrob/www/install/bin/pcre-config \
+             PCRE_LIB=/proj/rpi/redrob/www/install/lib/libpcre.a \
+             CFLAGS="$CFLAGS -DHAVE_PCRE_H=1 -DHAVE_LIBPCRE=1 \
+             -I/proj/rpi/redrob/www/install/include"
+make
+make install
+
+This should build LIGHTTPD and install files into the
+following directory: /proj/rpi/redrob/www/install
+
+4. Install LIGHTTPD on target
+-----------------------------
+(a) Download and edit the config file (lighttpd.conf)
+(b) Copy /proj/rpi/redrob/www/install/lib/* to /usr/lib
+(c) Copy LIGHTTPD binary /proj/rpi/redrob/www/install/sbin to /sbin
+
+Run LIGHTTPD specifying the paths to config file and lib folder:
+
+lighttpd -D -f /etc/lighttpd/lighttpd.conf -m /usr/lib
+
+5. Configure LIGHTTPD
+---------------------
+Article on how to configure lighttpd:
+http://www.cyberciti.biz/tips/installing-and-configuring-lighttpd-webserver-howto.html

@@ -1,4 +1,18 @@
 ===========================================================================
+2014-02-12
+
+* Created new directory structure for this project.
+  - daemon : The "Red Rob" daemon.
+  - sys    : Misc system files for RPi target.
+  - www    : Webserver, html and applet for daemon remote control.
+
+* Added framework for Redrob Remote Control (RRC) java applet.
+
+* Added instructions for how to build webserver lighttpd.
+
+===========================================================================
+
+===========================================================================
 2014-02-02
 
 * R1A09
