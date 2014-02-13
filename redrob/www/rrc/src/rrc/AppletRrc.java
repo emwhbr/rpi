@@ -9,6 +9,8 @@
 // *                                                                      *
 // ************************************************************************
 
+package rrc;
+
 import javax.swing.BorderFactory;
 import javax.swing.ButtonModel;
 import javax.swing.ImageIcon;
@@ -20,38 +22,32 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTextArea;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map;
 
-import redrob.Redrob;
-import redrob.VoltageBar;
-
 public class AppletRrc extends JApplet implements Runnable {
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A01";
+    private static final String PROD_REV  = "R1A02";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
     private static final String STEER_BUTT_RIGHT   = "HÖGER";
     private static final String STEER_BUTT_LEFT    = "VÄNSTER";
 
-    Map<String, Boolean> m_steer_map = new HashMap<String, Boolean>();
+    Map<String, Boolean> m_steer_map;
 
     private Redrob m_redrob;
 
@@ -106,6 +102,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	//debug("init...");
 
 	// Initialize variables
+        m_steer_map = new HashMap<>();
 	m_steer_map.put(STEER_BUTT_FORWARD, false);
 	m_steer_map.put(STEER_BUTT_REVERSE, false);
 	m_steer_map.put(STEER_BUTT_RIGHT,   false);
@@ -156,7 +153,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	    try {
 		m_redrob.disconnect();
 	    }
-	    catch(Exception exp) {
+	    catch(IOException exp) {
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
 		exp.printStackTrace(pw);
@@ -208,10 +205,9 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	    // Take it easy
 	    try {
-		m_main_thread.sleep(MAIN_THREAD_PERIOD_TIME_MS);
+		Thread.sleep(MAIN_THREAD_PERIOD_TIME_MS);
 	    }
 	    catch (InterruptedException e) {
-		continue;
 	    }
 	}
 
@@ -234,7 +230,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	    // Update voltage value
 	    update_voltage();
 	}
-	catch(Exception exp) {
+	catch(IOException exp) {
 	    StringWriter sw = new StringWriter();
 	    PrintWriter pw = new PrintWriter(sw);
 	    exp.printStackTrace(pw);
@@ -267,7 +263,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_voltage_value_label.setText(NO_VOLTAGE_VALUE);
 	    m_voltage_bar.deactivate();
 	}
-	catch(Exception exp) {
+	catch(IOException exp) {
 	    StringWriter sw = new StringWriter();
 	    PrintWriter pw = new PrintWriter(sw);
 	    exp.printStackTrace(pw);
@@ -301,7 +297,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_voltage_bar.deactivate();
 	    m_first_voltage_value = true;
 	}
-	catch(Exception exp) {
+	catch(IOException exp) {
 	    StringWriter sw = new StringWriter();
 	    PrintWriter pw = new PrintWriter(sw);
 	    exp.printStackTrace(pw);
@@ -326,25 +322,25 @@ public class AppletRrc extends JApplet implements Runnable {
 	
 	// Get actual steer code
 	Redrob.STEER_CODE code;
-
-	if (steer_button.equals(STEER_BUTT_FORWARD)) {
-	    code = Redrob.STEER_CODE.FORWARD;
-	}
-	else if (steer_button.equals(STEER_BUTT_REVERSE)) {
-	    code = Redrob.STEER_CODE.REVERSE;
-	}
-	else if (steer_button.equals(STEER_BUTT_RIGHT)) {
-	    code = Redrob.STEER_CODE.RIGHT;
-	}
-	else if (steer_button.equals(STEER_BUTT_LEFT)) {
-	    code = Redrob.STEER_CODE.LEFT;
-	}
-	else {
-	    // This should not happen when when this function
-	    // is called. There should be a button pressed.
-	    code = Redrob.STEER_CODE.NONE;
-	}
-	
+        switch (steer_button) {
+            case STEER_BUTT_FORWARD:
+                code = Redrob.STEER_CODE.FORWARD;
+                break;
+            case STEER_BUTT_REVERSE:
+                code = Redrob.STEER_CODE.REVERSE;
+                break;
+            case STEER_BUTT_RIGHT:
+                code = Redrob.STEER_CODE.RIGHT;
+                break;
+            case STEER_BUTT_LEFT:
+                code = Redrob.STEER_CODE.LEFT;
+                break;
+            default:
+                // This should not happen when when this function
+                // is called. There should be a button pressed.
+                code = Redrob.STEER_CODE.NONE;
+                break;
+        }
 	try {
 	    // Send actual steer code
 	    m_redrob.send_steer_code(code);
@@ -352,7 +348,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	    // Update voltage value
 	    update_voltage();
 	}
-	catch(Exception exp) {
+	catch(IOException exp) {
 	    StringWriter sw = new StringWriter();
 	    PrintWriter pw = new PrintWriter(sw);
 	    exp.printStackTrace(pw);
@@ -542,10 +538,10 @@ public class AppletRrc extends JApplet implements Runnable {
 	Class load_class = new EmptyClass().getClass();
 
 	m_connected_icon =
-	    new ImageIcon(load_class.getResource("/led_green.png"));
+	    new ImageIcon(load_class.getResource("/res/led_green.png"));
 
 	m_disconnected_icon =
-	    new ImageIcon(load_class.getResource("/led_red.png"));
+	    new ImageIcon(load_class.getResource("/res/led_red.png"));
 
 	m_connected_state_label = new JLabel();
 	m_connected_state_label.setIcon(m_disconnected_icon);

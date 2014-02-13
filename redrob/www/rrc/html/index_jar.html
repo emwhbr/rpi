@@ -22,12 +22,26 @@
 		background-color: white; 
 		border: 2px solid black;
 		padding: 0px;">
+
+<!--
+    Works in Chromium, Chrome, IE and Firefox
+-->
     <applet       
-       code="AppletRrc.class"
+       code="rrc/AppletRrc"
        archive="rrc.jar"
        width="500"
        height="220">
     </applet>
+
+<!-- Works in Firefox only
+    <object
+       codetype="application/java"
+       classid="java:rrc/AppletRrc"
+       archive="rrc.jar"
+       width="500"
+       height="220">
+    </object>
+-->
     </div>
     <br>
     &#169 2014 Bonden i Nol.<br>

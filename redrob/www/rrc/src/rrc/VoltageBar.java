@@ -9,7 +9,7 @@
 // *                                                                      *
 // ************************************************************************
 
-package redrob;
+package rrc;
 
 import javax.swing.JProgressBar;
 import javax.swing.SwingConstants;

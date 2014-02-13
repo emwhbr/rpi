@@ -9,7 +9,7 @@
 // *                                                                      *
 // ************************************************************************
 
-package redrob;
+package rrc;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -31,7 +31,7 @@ public class Redrob {
 	RIGHT((byte)0x04),
 	LEFT((byte)0x08);
 
-	private byte value;  
+	private final byte value;  
   
 	private STEER_CODE(byte value) {  
 	    this.value = value;
@@ -48,7 +48,7 @@ public class Redrob {
     private static final int COMMAND_STEER = 1;
     private static final int COMMAND_GET_VOLTAGE = 2;
 
-    private String m_peer_ip_address;
+    private final String m_peer_ip_address;
     private Socket m_sock;
 
     private DataInputStream m_in;
@@ -118,7 +118,7 @@ public class Redrob {
 	    m_in = new DataInputStream(m_sock.getInputStream());
 	    m_out = new DataOutputStream(m_sock.getOutputStream());
 	}
-	catch(Exception exp) {
+	catch(IOException exp) {
 	    // Handle exception when connect
 	    if (m_sock.isBound()) {
 		m_sock.close();

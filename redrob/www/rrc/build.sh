@@ -10,76 +10,60 @@
 #  *                                                                      *
 #  ************************************************************************/
 
-CLASS_DIR="./class"
-DEPLOY_DIR="./deploy"
-DEPLOY_JAR_DIR="./deploy_jar"
+CLASSES_DIR="./classes"
+DIST_DIR="./dist"
 HTML_DIR="./html"
-JAVA_DIR="./java"
+SRC_DIR="./src"
 RES_DIR="./res"
 SIM_DIR="./sim"
 
 case "$1" in
     applet)
         echo "==[APPLET]==="
-	javac -cp ${CLASS_DIR} \
-              -d ${CLASS_DIR} \
-	      -sourcepath ${JAVA_DIR} \
-              ${JAVA_DIR}/*.java
+	javac -cp ${CLASSES_DIR} \
+              -d ${CLASSES_DIR} \
+	      -sourcepath ${SRC_DIR}/rrc \
+              ${SRC_DIR}/rrc/*.java
         ;;
 
     sim)
 	echo "==[SIMULATOR]==="
-	javac -cp ${SIM_DIR}/class \
-              -d ${SIM_DIR}/class \
-	      -sourcepath ${SIM_DIR}/java \
-              ${SIM_DIR}/java/*.java
+	javac -cp ${SIM_DIR}/classes \
+              -d ${SIM_DIR}/classes \
+	      -sourcepath ${SIM_DIR}/src \
+              ${SIM_DIR}/src/*.java
 	;;
 
-    deploy)
-	echo "==[DEPLOY]==="
-	cp -r ${CLASS_DIR}/*.class ${DEPLOY_DIR}
-	cp -r ${CLASS_DIR}/redrob  ${DEPLOY_DIR}
-	cp ${HTML_DIR}/index.html  ${DEPLOY_DIR}
-	cp ${RES_DIR}/*.png        ${DEPLOY_DIR}	
-	;;
+    dist)
+	echo "==[DIST-JAR]==="	
+	cp -r ${CLASSES_DIR}/rrc  ${DIST_DIR}
+	cp -r ${RES_DIR}          ${DIST_DIR}
+	jar cvf0e /tmp/rrc.jar AppletRrc -C ${DIST_DIR} .
 
-    deploy_jar)
-	echo "==[DEPLOY-JAR]==="
-	cp -r ${CLASS_DIR}/*.class ${DEPLOY_JAR_DIR}
-	cp -r ${CLASS_DIR}/redrob  ${DEPLOY_JAR_DIR}
-	cp ${RES_DIR}/*.png        ${DEPLOY_JAR_DIR}
-	jar cvf0e /tmp/rrc.jar AppletRrc -C ${DEPLOY_JAR_DIR} .
-	rm -rf ${DEPLOY_JAR_DIR}/*.html
-	rm -rf ${DEPLOY_JAR_DIR}/*.jar
-	rm -rf ${DEPLOY_JAR_DIR}/*.html
-	rm -rf ${DEPLOY_JAR_DIR}/*.class
-	rm -rf ${DEPLOY_JAR_DIR}/*.png
-	rm -rf ${DEPLOY_JAR_DIR}/redrob
-	mv /tmp/rrc.jar ${DEPLOY_JAR_DIR}/
-	cp ${HTML_DIR}/index_jar.html ${DEPLOY_JAR_DIR}/index.html	
+	rm -rf ${DIST_DIR}/rrc
+	rm -rf ${DIST_DIR}/res
+
+	mv /tmp/rrc.jar ${DIST_DIR}
+	cp ${HTML_DIR}/index_jar.html ${DIST_DIR}/index.html	
 	;;
 
     clean)
         echo "==[CLEAN]==="
 	rm -rf ./*~      	
-	rm -rf ${CLASS_DIR}/*.class
-	rm -rf ${CLASS_DIR}/redrob	
-	rm -rf ${DEPLOY_DIR}/*.html
-	rm -rf ${DEPLOY_DIR}/*.class
-	rm -rf ${DEPLOY_DIR}/*.png
-	rm -rf ${DEPLOY_DIR}/redrob
-	rm -rf ${DEPLOY_JAR_DIR}/*.html
-	rm -rf ${DEPLOY_JAR_DIR}/*.jar
+	rm -rf ${CLASSES_DIR}/rrc
+	rm -rf ${DIST_DIR}/*.html
+	rm -rf ${DIST_DIR}/*.jar
 	rm -rf ${HTML_DIR}/*~
-	rm -rf ${JAVA_DIR}/*~
+	rm -rf ${SRC_DIR}/*~
+	rm -rf ${SRC_DIR}/rrc/*~
 	rm -rf ${RES_DIR}/*~
 	rm -rf ${SIM_DIR}/*~
-	rm -rf ${SIM_DIR}/java/*~
-	rm -rf ${SIM_DIR}/class/*.class
+	rm -rf ${SIM_DIR}/src/*~
+	rm -rf ${SIM_DIR}/classes/*.class
         ;;
 
     *)
-        echo "Usage $0 {applet|sim|deploy|deploy_jar|clean}"
+        echo "Usage $0 {applet|sim|dist|clean}"
         exit 1
         ;;
 esac

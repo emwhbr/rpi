@@ -13,5 +13,4 @@
 ./build.sh clean &&
 ./build.sh applet &&
 ./build.sh sim &&
-./build.sh deploy &&
-./build.sh deploy_jar
+./build.sh dist

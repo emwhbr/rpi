@@ -1,4 +1,16 @@
 ===========================================================================
+2014-02-13
+
+* Redrob Remote Control
+  - R1A02
+  - Changed directory structure, inspired by Netbeans IDE.
+  - Renamed package redrob to rrc.
+  - Minor updates to remove warnings after compile using with Netbeans IDE.
+  - JAR is now the only deployment option.
+
+===========================================================================
+
+===========================================================================
 2014-02-12
 
 * Created new directory structure for this project.
