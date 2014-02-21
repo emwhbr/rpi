@@ -1,6 +1,6 @@
 // ************************************************************************
 // *                                                                      *
-// * Copyright (C) 2013 Bonden i Nol (hakanbrolin@hotmail.com)            *
+// * Copyright (C) 2014 Bonden i Nol (hakanbrolin@hotmail.com)            *
 // *                                                                      *
 // * This program is free software; you can redistribute it and/or modify *
 // * it under the terms of the GNU General Public License as published by *
@@ -9,22 +9,21 @@
 // *                                                                      *
 // ************************************************************************
 
-#ifndef __REDROBD_REMOTE_CTRL_H__
-#define __REDROBD_REMOTE_CTRL_H__
+#ifndef __REDROBD_RC_NET_H__
+#define __REDROBD_RC_NET_H__
 
+#include <string>
 #include <stdint.h>
+#include <memory>
+
+#include "redrobd_remote_ctrl.h"
+#include "redrobd_rc_net_server_thread.h"
 
 using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
-// Steer codes
-#define REDROBD_RC_NONE     0x00
-#define REDROBD_RC_FORWARD  0x01
-#define REDROBD_RC_REVERSE  0x02
-#define REDROBD_RC_RIGHT    0x04
-#define REDROBD_RC_LEFT     0x08
 
 /////////////////////////////////////////////////////////////////////////////
 //               Class support types
@@ -34,26 +33,31 @@ using namespace std;
 //               Definition of classes
 /////////////////////////////////////////////////////////////////////////////
 
-class redrobd_remote_ctrl {
+class redrobd_rc_net : public redrobd_remote_ctrl {
   
  public:
-  redrobd_remote_ctrl(void);
+  redrobd_rc_net(string server_ip_address,
+		 uint16_t server_port);
 
-  ~redrobd_remote_ctrl(void);
+  ~redrobd_rc_net(void);
 
-  bool is_active(void);
+  // Implements pure virtual functions from base class
+  virtual void initialize(void);
+  virtual void finalize(void);
+  virtual uint16_t get_steering(void);
 
-  virtual void initialize(void) = 0;       // Pure virtual function
-  virtual void finalize(void) = 0;         // Pure virtual function
-  virtual uint16_t get_steering(void) = 0; // Pure virtual function
+  void set_voltage(float value);
 
- protected:
-  void set_active(bool value);
+  void server_thread_check(void);
 
  private:
-  bool m_is_active;
+  string   m_server_ip_address;
+  uint16_t m_server_port;
+
+  // The server thread object
+  auto_ptr<redrobd_rc_net_server_thread> m_server_thread_auto;
 
   void init_members(void);
 };
 
-#endif // __REDROBD_REMOTE_CTRL_H__
+#endif // __REDROBD_RC_NET_H__

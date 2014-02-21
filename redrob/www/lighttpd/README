@@ -1,7 +1,7 @@
 Required software
 -----------------
-pcre-8.34.tar.gz	http://www.lighttpd.net/
-lighttpd-1.4.34.tar.gz	http://www.pcre.org/
+pcre-8.34.tar.gz	http://www.pcre.org/
+lighttpd-1.4.34.tar.gz	http://www.lighttpd.net/
 
 Cross toolchain	prefix	arm-unknown-linux-gnueabihf
 

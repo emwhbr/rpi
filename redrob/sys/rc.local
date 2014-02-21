@@ -17,6 +17,10 @@ if [ "$_IP" ]; then
   printf "My IP address is %s\n" "$_IP"
 fi
 
+# Start web server as daemon
+lighttpd -f /proj/redrob/lighttpd/lighttpd.conf \
+         -m /proj/redrob/lighttpd/modules
+
 # Start Redrob daemon
 /proj/redrob/redrobd.sh start
 

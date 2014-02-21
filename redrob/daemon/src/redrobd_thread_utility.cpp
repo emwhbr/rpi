@@ -25,9 +25,9 @@
 
 ////////////////////////////////////////////////////////////////
 
-void redrobd_thread_initialize_cyclic(cyclic_thread *ct,
-				      double ct_start_timeout,
-				      double ct_execute_timeout)
+void redrobd_thread_initialize(thread *ct,
+			       double ct_start_timeout,
+			       double ct_execute_timeout)
 {
   // Step 1: Start thread
   if ( ct->start(NULL) != THREAD_SUCCESS ) {
@@ -109,8 +109,8 @@ void redrobd_thread_initialize_cyclic(cyclic_thread *ct,
 
 ////////////////////////////////////////////////////////////////
 
-void redrobd_thread_finalize_cyclic(cyclic_thread *ct,
-				    double ct_stop_timeout)
+void redrobd_thread_finalize(thread *ct,
+			     double ct_stop_timeout)
 {
   // Step 1: Stop thread
   if ( ct->stop() != THREAD_SUCCESS ) {    
@@ -142,7 +142,7 @@ void redrobd_thread_finalize_cyclic(cyclic_thread *ct,
 
 ////////////////////////////////////////////////////////////////
 
-void redrobd_thread_check_cyclic(cyclic_thread *ct)
+void redrobd_thread_check(thread *ct)
 {
   // Check state (executing)
   if ( ct->get_state() != THREAD_STATE_EXECUTING ) {

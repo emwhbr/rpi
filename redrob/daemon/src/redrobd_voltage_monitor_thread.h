@@ -16,6 +16,7 @@
 
 #include "cyclic_thread.h"
 #include "mcp3008_io.h"
+#include "timer.h"
 
 using namespace std;
 
@@ -63,6 +64,9 @@ class redrobd_voltage_monitor_thread : public cyclic_thread {
 
   // Scale factor used by voltage divider (v_mon = v_in * sf)
   float m_voltage_sf;
+
+  // Controls when to log voltages
+  timer m_voltage_log_timer;
 
   void init_members(void);
 };

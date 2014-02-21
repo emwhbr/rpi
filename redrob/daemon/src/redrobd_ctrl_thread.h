@@ -17,7 +17,8 @@
 #include "cyclic_thread.h"
 #include "redrobd_alive_thread.h"
 #include "redrobd_voltage_monitor_thread.h"
-#include "redrobd_remote_ctrl.h"
+#include "redrobd_rc_rf.h"
+#include "redrobd_rc_net.h"
 #include "redrobd_mc_cont_steer.h"
 #include "redrobd_mc_non_cont_steer.h"
 #include "mcp3008_io.h"
@@ -54,8 +55,11 @@ class redrobd_ctrl_thread : public cyclic_thread {
   // The battery monitor thread object
   auto_ptr<redrobd_voltage_monitor_thread> m_bat_mon_thread_auto;
 
-  // Remote control object
-  auto_ptr<redrobd_remote_ctrl> m_remote_ctrl_auto;
+  // Remote control object (RF, Radio)
+  auto_ptr<redrobd_rc_rf> m_rc_rf_auto;
+
+  // Remote control object (NET, Sockets)
+  auto_ptr<redrobd_rc_net> m_rc_net_auto;
 
   // Motor control object (continuous steer)
   auto_ptr<redrobd_mc_cont_steer> m_mc_cont_steer_auto;
@@ -84,6 +88,8 @@ class redrobd_ctrl_thread : public cyclic_thread {
   bool battery_voltage_ok(void);
 
   void check_thread_run_status(void);
+
+  uint16_t get_remote_steering(void);
 
   void motor_control(uint16_t steer_code);
 };

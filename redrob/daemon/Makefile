@@ -35,7 +35,6 @@ endif
 OBJ_DIR = ./obj
 SRC_DIR = ./src
 CFG_DIR = ./cfg
-SCRIPT_DIR = ./script
 
 DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/redrobd.o \
@@ -50,6 +49,9 @@ DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/redrobd_gpio.o \
               $(OBJ_DIR)/redrobd_led.o \
               $(OBJ_DIR)/redrobd_remote_ctrl.o \
+              $(OBJ_DIR)/redrobd_rc_rf.o \
+              $(OBJ_DIR)/redrobd_rc_net.o \
+              $(OBJ_DIR)/redrobd_rc_net_server_thread.o \
               $(OBJ_DIR)/redrobd_motor_ctrl.o \
               $(OBJ_DIR)/redrobd_mc_cont_steer.o \
               $(OBJ_DIR)/redrobd_mc_non_cont_steer.o \
@@ -59,6 +61,7 @@ DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/daemon_utility.o \
               $(OBJ_DIR)/cfg_file.o \
               $(OBJ_DIR)/excep.o \
+              $(OBJ_DIR)/socket_support.o \
               $(OBJ_DIR)/delay.o \
               $(OBJ_DIR)/timer.o \
               $(OBJ_DIR)/thread.o \
@@ -111,7 +114,6 @@ clean :
 	rm -f $(OBJ_DIR)/*.$(ARCH)
 	rm -f $(SRC_DIR)/*~
 	rm -f $(CFG_DIR)/*~
-	rm -rf $(SCRIPT_DIR)/*~
 	rm -rf *~
 
 help:

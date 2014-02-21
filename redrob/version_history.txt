@@ -1,4 +1,24 @@
 ===========================================================================
+2014-02-21
+
+* Built web server (LIGHTTPD) for ARM, installed on RPi target.
+  Automatically started as daemon by start script /etc/rc.local.
+  Home page includes RRC java applet (R1A02).
+
+* Redrob daemon
+  - R1A10
+  - Remote control now includes both RF (Radio) and NET (TCP sockets).
+  - Added TCP server for communication with RRC java applet.
+  - Default frequency for controller thread is now 5.0 Hz.
+  - Voltage values are now logged to file every 10 seconds.
+  
+* Tested on bench (no battery) using Ethernet cable (eth0).
+  - Remote control NET [ok]
+  - Remote control RF  [ok]
+
+===========================================================================
+
+===========================================================================
 2014-02-13
 
 * Redrob Remote Control

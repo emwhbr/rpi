@@ -13,7 +13,7 @@
 # true    execute as daemon background process
 # false   execute as ordinary process
 # Note! Value only valid during start (not restart)
-daemonize=true
+daemonize=false
 
 # Run daemon as this user
 # Note! Value only valid during start (not restart)
@@ -35,7 +35,7 @@ log_file=/proj/redrob/redrobd.log
 # Controls if internal log should be sent to STDOUT
 # Only possible if 'daemonize=false'
 # Note! Value only valid during start (not restart)
-log_stdout=false
+log_stdout=true
 
 # Frequency (Hz) of the main supervision and control thread
 # Note! Value valid during start and restart

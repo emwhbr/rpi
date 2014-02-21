@@ -24,7 +24,7 @@
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 #define PRODUCT_NUMBER   "REDROBD"
-#define RSTATE           "R1A09"
+#define RSTATE           "R1A10"
 
 #ifndef REDROBD_CFG_FILE
 #define CFG_FILE "/proj/redrob/"REDROBD_NAME".cfg"
@@ -411,7 +411,7 @@ void redrobd_core::internal_check_run_status(void)
 
   try {
     // Check state and status of cyclic control thread object
-    redrobd_thread_check_cyclic((cyclic_thread *)thread_ptr);
+    redrobd_thread_check((thread *)thread_ptr);
   }
   catch (...) {
     m_ctrl_thread_auto = auto_ptr<redrobd_ctrl_thread>(thread_ptr);
@@ -458,9 +458,9 @@ void redrobd_core::internal_initialize(string logfile,
 
   try {
     // Initialize cyclic control thread object
-    redrobd_thread_initialize_cyclic((cyclic_thread *)thread_ptr,
-				     CTRL_THREAD_START_TIMEOUT,
-				     CTRL_THREAD_EXECUTE_TIMEOUT);
+    redrobd_thread_initialize((thread *)thread_ptr,
+			      CTRL_THREAD_START_TIMEOUT,
+			      CTRL_THREAD_EXECUTE_TIMEOUT);
   }
   catch (...) {
     m_ctrl_thread_auto = auto_ptr<redrobd_ctrl_thread>(thread_ptr);
@@ -485,8 +485,8 @@ void redrobd_core::internal_finalize(void)
 
   try {
     // Finalize the cyclic control thread object
-    redrobd_thread_finalize_cyclic((cyclic_thread *)thread_ptr,
-				   CTRL_THREAD_STOP_TIMEOUT);
+    redrobd_thread_finalize((thread *)thread_ptr,
+			    CTRL_THREAD_STOP_TIMEOUT);
   }
   catch (...) {
     m_ctrl_thread_auto = auto_ptr<redrobd_ctrl_thread>(thread_ptr);

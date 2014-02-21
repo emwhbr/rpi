@@ -21,6 +21,7 @@
 #include "rpi_hw.h"
 #include "daemon_utility.h"
 #include "excep.h"
+#include "socket_support.h"
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of macros
@@ -33,13 +34,16 @@
                                           // Period time + one extra second
 
 #define BAT_MON_THREAD_NAME             "REDROBD_BAT_MON"
-#define BAT_MON_THREAD_FREQUENCY        0.2 // Hz
-#define BAT_MON_THREAD_START_TIMEOUT    1.0 // Seconds
-#define BAT_MON_THREAD_EXECUTE_TIMEOUT  0.5 // Seconds
-#define BAT_MON_THREAD_STOP_TIMEOUT     6.0 // Seconds
-                                            // Period time + one extra second
+#define BAT_MON_THREAD_FREQUENCY        4.0  // Hz
+#define BAT_MON_THREAD_START_TIMEOUT    1.0  // Seconds
+#define BAT_MON_THREAD_EXECUTE_TIMEOUT  0.5  // Seconds
+#define BAT_MON_THREAD_STOP_TIMEOUT     1.25 // Seconds
+                                             // Period time + one extra second
 
 #define BAT_MIN_ALLOWED_VOLTAGE  6.9 // Volt
+
+#define RC_NET_SERVER_IP    ANY_IP_ADDRESS
+#define RC_NET_SERVER_PORT  52022
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
@@ -78,16 +82,17 @@ long redrobd_ctrl_thread::setup(void)
 
     init_members();
 
+    /////////////////////////////////
+    //  INITIALIZE ALIVE THREAD
+    /////////////////////////////////
+
     // Create the cyclic alive thread object with garbage collector
     redrobd_alive_thread *thread_ptr1 =
       new redrobd_alive_thread(ALIVE_THREAD_NAME,
 			       ALIVE_THREAD_FREQUENCY);    
     m_alive_thread_auto =
       auto_ptr<redrobd_alive_thread>(thread_ptr1);
-
-    /////////////////////////////////
-    //  INITIALIZE ALIVE THREAD
-    /////////////////////////////////
+    
     redrobd_log_writeln("About to initialize alive thread");
 
     // Take back ownership from auto_ptr
@@ -95,9 +100,9 @@ long redrobd_ctrl_thread::setup(void)
     
     try {
        // Initialize cyclic alive thread object
-      redrobd_thread_initialize_cyclic((cyclic_thread *)thread_ptr1,
-				       ALIVE_THREAD_START_TIMEOUT,
-				       ALIVE_THREAD_EXECUTE_TIMEOUT);
+      redrobd_thread_initialize((thread *)thread_ptr1,
+				ALIVE_THREAD_START_TIMEOUT,
+				ALIVE_THREAD_EXECUTE_TIMEOUT);
     }
     catch (...) {
       m_alive_thread_auto = auto_ptr<redrobd_alive_thread>(thread_ptr1);
@@ -107,6 +112,10 @@ long redrobd_ctrl_thread::setup(void)
     // Give back ownership to auto_ptr
     m_alive_thread_auto = auto_ptr<redrobd_alive_thread>(thread_ptr1);
 
+    /////////////////////////////////
+    //  INITIALIZE A/D Converter
+    /////////////////////////////////
+
     // Create the A/D Converter object
     m_mcp3008_io_ptr = new mcp3008_io(MCP3008_SPI_DEV,
 				      MCP3008_REF_VOLTAGE);
@@ -114,6 +123,10 @@ long redrobd_ctrl_thread::setup(void)
     // Initialize A/D Converter
     m_mcp3008_io_ptr->initialize(MCP3008_SPI_SPEED);
     
+    /////////////////////////////////
+    //  INITIALIZE HW configuration
+    /////////////////////////////////
+
     // Create the hardware configuration object object with garbage collector
     redrobd_hw_cfg *redrobd_hw_cfg_ptr =
       new redrobd_hw_cfg(m_mcp3008_io_ptr,
@@ -125,17 +138,36 @@ long redrobd_ctrl_thread::setup(void)
     // Initialize hardware configuration
     m_hw_cfg_auto->initialize();
 
-    // Create the remote control object with garbage collector
-    redrobd_remote_ctrl *rc_ptr =
-      new redrobd_remote_ctrl(PIN_RF_IN_3,  // Forward
-			      PIN_RF_IN_2,  // Reverse
-			      PIN_RF_IN_0,  // Right
-			      PIN_RF_IN_1); // Left
+    /////////////////////////////////
+    //  INITIALIZE remote control
+    /////////////////////////////////
 
-    m_remote_ctrl_auto = auto_ptr<redrobd_remote_ctrl>(rc_ptr);
+    // Create the remote control object with garbage collector (RF, Radio)
+    redrobd_rc_rf *rc_rf_ptr =
+      new redrobd_rc_rf(PIN_RF_IN_3,  // Forward
+			PIN_RF_IN_2,  // Reverse
+			PIN_RF_IN_0,  // Right
+			PIN_RF_IN_1); // Left
 
-    // Initialize remote control
-    m_remote_ctrl_auto->initialize();
+    m_rc_rf_auto = auto_ptr<redrobd_rc_rf>(rc_rf_ptr);
+
+    // Initialize remote control (RF, Radio)
+    m_rc_rf_auto->initialize();
+
+    // Create the remote control object with garbage collector (NET, Sockets)
+    redrobd_rc_net *rc_net_ptr =
+      new redrobd_rc_net(RC_NET_SERVER_IP,    // Server local IP address
+			 RC_NET_SERVER_PORT); // Server local port
+
+    m_rc_net_auto = auto_ptr<redrobd_rc_net>(rc_net_ptr);
+
+    // Initialize remote control (NET, Sockets)
+    m_rc_net_auto->initialize();
+    m_rc_net_auto->set_voltage(0.0);
+
+    /////////////////////////////////
+    //  INITIALIZE motor control
+    /////////////////////////////////
 
     // Check if continuous steering was selected (DIP-switch)
     m_cont_steering = m_hw_cfg_auto->select_continuous_steering();
@@ -174,6 +206,10 @@ long redrobd_ctrl_thread::setup(void)
       m_mc_non_cont_steer_auto->initialize();
     }
 
+    /////////////////////////////////
+    //  INITIALIZE battery monitor
+    /////////////////////////////////
+
     // Create the cyclic battery monitor thread object with garbage collector
     redrobd_voltage_monitor_thread *thread_ptr2 =
       new redrobd_voltage_monitor_thread(BAT_MON_THREAD_NAME,
@@ -184,9 +220,6 @@ long redrobd_ctrl_thread::setup(void)
     m_bat_mon_thread_auto =
       auto_ptr<redrobd_voltage_monitor_thread>(thread_ptr2);
 
-    ////////////////////////////////////////
-    //  INITIALIZE BATTERY MONITOR THREAD
-    ////////////////////////////////////////
     redrobd_log_writeln("About to initialize battery monitor thread");
 
     // Take back ownership from auto_ptr
@@ -194,9 +227,9 @@ long redrobd_ctrl_thread::setup(void)
     
     try {
       // Initialize cyclic battery monitor thread object
-      redrobd_thread_initialize_cyclic((cyclic_thread *)thread_ptr2,
-				       BAT_MON_THREAD_START_TIMEOUT,
-				       BAT_MON_THREAD_EXECUTE_TIMEOUT);
+      redrobd_thread_initialize((thread *)thread_ptr2,
+				BAT_MON_THREAD_START_TIMEOUT,
+				BAT_MON_THREAD_EXECUTE_TIMEOUT);
     }
     catch (...) {
       m_bat_mon_thread_auto =
@@ -237,7 +270,7 @@ long redrobd_ctrl_thread::cleanup(void)
     redrobd_log_writeln(get_name() + " : cleanup started");
 
     ////////////////////////////////////////
-    //  FINALIZE BATTERY MONITOR THREAD
+    //  FINALIZE battery monitor
     ////////////////////////////////////////
     redrobd_log_writeln("About to finalize battery monitor thread");
 
@@ -247,8 +280,8 @@ long redrobd_ctrl_thread::cleanup(void)
     
     try {
       // Finalize the cyclic battery monitor thread object
-      redrobd_thread_finalize_cyclic((cyclic_thread *)thread_ptr2,
-				     BAT_MON_THREAD_STOP_TIMEOUT);
+      redrobd_thread_finalize((thread *)thread_ptr2,
+			      BAT_MON_THREAD_STOP_TIMEOUT);
     }
     catch (...) {
       m_bat_mon_thread_auto =
@@ -263,6 +296,10 @@ long redrobd_ctrl_thread::cleanup(void)
     // Delete the cyclic battery monitor thread object
     m_bat_mon_thread_auto.reset();
 
+    ////////////////////////////////////////
+    //  FINALIZE motor control
+    ////////////////////////////////////////
+
     // Finalize and delete the motor control object
     if (m_cont_steering) {
       m_mc_cont_steer_auto->finalize();
@@ -273,13 +310,29 @@ long redrobd_ctrl_thread::cleanup(void)
       m_mc_non_cont_steer_auto.reset();
     }
 
-    // Finalize and delete the remote control object
-    m_remote_ctrl_auto->finalize();
-    m_remote_ctrl_auto.reset();
+    ////////////////////////////////////////
+    //  FINALIZE remote control
+    ////////////////////////////////////////
+
+    // Finalize and delete the remote control objects
+    m_rc_net_auto->finalize();
+    m_rc_net_auto.reset();
+
+    m_rc_rf_auto->finalize();   
+    m_rc_rf_auto.reset();
+
+    
+    ////////////////////////////////////////
+    //  FINALIZE HW configuration
+    ////////////////////////////////////////    
 
     // Finalize and delete the hardware configuration object
     m_hw_cfg_auto->finalize();
     m_hw_cfg_auto.reset();
+
+    ////////////////////////////////////////
+    //  FINALIZE A/D Converter
+    ////////////////////////////////////////
 
     // Finalize and delete A/D Converter
     m_mcp3008_io_ptr->finalize();
@@ -296,8 +349,8 @@ long redrobd_ctrl_thread::cleanup(void)
     
     try {
       // Finalize the cyclic alive thread object
-      redrobd_thread_finalize_cyclic((cyclic_thread *)thread_ptr1,
-				     ALIVE_THREAD_STOP_TIMEOUT);
+      redrobd_thread_finalize((thread *)thread_ptr1,
+			      ALIVE_THREAD_STOP_TIMEOUT);
     }
     catch (...) {
       m_alive_thread_auto = auto_ptr<redrobd_alive_thread>(thread_ptr1);
@@ -352,8 +405,8 @@ long redrobd_ctrl_thread::cyclic_execute(void)
     // Check state and status of created threads
     check_thread_run_status();
 
-    // Check steering from remote control
-    uint16_t steering = m_remote_ctrl_auto->get_steering();
+    // Check remote control steering
+    uint16_t steering = get_remote_steering();
 
     // Do motor control
     switch (steering) {
@@ -417,7 +470,8 @@ void redrobd_ctrl_thread::init_members(void)
 {
   m_alive_thread_auto.reset();
   m_bat_mon_thread_auto.reset();
-  m_remote_ctrl_auto.reset();
+  m_rc_rf_auto.reset();
+  m_rc_net_auto.reset();
   m_mc_cont_steer_auto.reset();
   m_mc_non_cont_steer_auto.reset();
 
@@ -444,6 +498,9 @@ bool redrobd_ctrl_thread::battery_voltage_ok(void)
 	 (1.0/BAT_MON_THREAD_FREQUENCY) ) {      
       m_battery_check_allowed = true;
     }
+
+    // Update voltage for remote control (NET, Sockets)
+    m_rc_net_auto->set_voltage(0.0);
   }
   else {
     // Safe to check battery voltage now
@@ -456,6 +513,9 @@ bool redrobd_ctrl_thread::battery_voltage_ok(void)
     if (v_bat.v_in < BAT_MIN_ALLOWED_VOLTAGE) {
       battery_ok = false;
     }
+
+    // Update voltage for remote control (NET, Sockets)
+    m_rc_net_auto->set_voltage(v_bat.v_in);
   }
 
   return battery_ok;
@@ -475,7 +535,7 @@ void redrobd_ctrl_thread::check_thread_run_status(void)
 
   try {
     // Check state and status of alive thread object
-    redrobd_thread_check_cyclic((cyclic_thread *)thread_ptr1);
+    redrobd_thread_check((thread *)thread_ptr1);
   }
   catch (...) {
     m_alive_thread_auto =
@@ -487,6 +547,13 @@ void redrobd_ctrl_thread::check_thread_run_status(void)
   m_alive_thread_auto =
     auto_ptr<redrobd_alive_thread>(thread_ptr1);
 
+  /////////////////////////////////////////////////
+  //  CHECK REMOTE CONTROL (NET, SOCKETS) THREAD
+  /////////////////////////////////////////////////
+
+  // Check state and status of server thread object
+  m_rc_net_auto->server_thread_check();
+
   ///////////////////////////////////
   //  CHECK BATTERY MONITOR THREAD   
   ///////////////////////////////////
@@ -497,7 +564,7 @@ void redrobd_ctrl_thread::check_thread_run_status(void)
 
   try {
     // Check state and status of alive thread object
-    redrobd_thread_check_cyclic((cyclic_thread *)thread_ptr2);
+    redrobd_thread_check((thread *)thread_ptr2);
   }
   catch (...) {
     m_bat_mon_thread_auto =
@@ -507,9 +574,43 @@ void redrobd_ctrl_thread::check_thread_run_status(void)
 
   // Give back ownership to auto_ptr
   m_bat_mon_thread_auto =
-    auto_ptr<redrobd_voltage_monitor_thread>(thread_ptr2);
+    auto_ptr<redrobd_voltage_monitor_thread>(thread_ptr2); 
 }
 
+////////////////////////////////////////////////////////////////
+
+uint16_t redrobd_ctrl_thread::get_remote_steering(void)
+{
+  uint16_t steering_rf;
+  uint16_t steering_net;
+  uint16_t steering;
+
+  // Get steerings from remote control objects
+  steering_rf = m_rc_rf_auto->get_steering();
+  steering_net = m_rc_net_auto->get_steering();
+
+  // (RF, Radio) has highest priority
+  if (m_rc_rf_auto->is_active()) {
+    steering = steering_rf;
+    if (m_verbose) {
+      redrobd_log_writeln(get_name() + " : remote RF active");
+    }
+  }
+  else if (m_rc_net_auto->is_active()) {
+    steering = steering_net;
+    if (m_verbose) {
+      redrobd_log_writeln(get_name() + " : remote NET active");
+    }
+  }
+  else {
+    steering = REDROBD_RC_NONE;
+    if (m_verbose) {
+      redrobd_log_writeln(get_name() + " : remote NONE active");
+    }
+  }
+
+  return steering;
+}
 
 ////////////////////////////////////////////////////////////////
 

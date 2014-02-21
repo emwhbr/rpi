@@ -12,9 +12,7 @@
 #ifndef __REDROBD_THREAD_UTILITY_H__
 #define __REDROBD_THREAD_UTILITY_H__
 
-#include <memory>
-
-#include "cyclic_thread.h"
+#include "thread.h"
 
 using namespace std;
 
@@ -25,13 +23,13 @@ using namespace std;
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of exported functions
 /////////////////////////////////////////////////////////////////////////////
-extern void redrobd_thread_initialize_cyclic(cyclic_thread *ct,
-					     double ct_start_timeout,
-					     double ct_execute_timeout);
+extern void redrobd_thread_initialize(thread *ct,
+				      double ct_start_timeout,
+				      double ct_execute_timeout);
 
-extern void redrobd_thread_finalize_cyclic(cyclic_thread *ct,
-					   double ct_stop_timeout);
+extern void redrobd_thread_finalize(thread *ct,
+				    double ct_stop_timeout);
 
-extern void redrobd_thread_check_cyclic(cyclic_thread *ct);
+extern void redrobd_thread_check(thread *ct);
 
 #endif // __REDROBD_THREAD_UTILITY_H__

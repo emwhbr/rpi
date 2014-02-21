@@ -13,6 +13,7 @@
 #include <iomanip>
 
 #include "redrobd_voltage_monitor_thread.h"
+#include "redrobd.h"
 #include "redrobd_log.h"
 #include "redrobd_error_utility.h"
 #include "daemon_utility.h"
@@ -20,6 +21,11 @@
 // Implementation notes:
 // 1. Assumes the MCP3008 interface already initialized.
 //
+
+/////////////////////////////////////////////////////////////////////////////
+//               Definition of macros
+/////////////////////////////////////////////////////////////////////////////
+#define LOG_VOLTAGES_INTERVAL  10.0 // Seconds
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
@@ -77,6 +83,13 @@ long redrobd_voltage_monitor_thread::setup(void)
     redrobd_log_writeln(get_name() + " : setup started");
 
     init_members();
+
+    // Start timer controlling when to log voltages
+    if (m_voltage_log_timer.reset() != TIMER_SUCCESS) {
+      THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
+		"Error resetting voltage log timer for thread %s",
+		get_name().c_str());      
+    }
             
     redrobd_log_writeln(get_name() + " : setup done");
 
@@ -138,13 +151,26 @@ long redrobd_voltage_monitor_thread::cyclic_execute(void)
     // Lockup read operation
     pthread_mutex_unlock(&m_voltage_mutex);
 
-    // Log voltages
-    ostringstream oss_msg;
-    oss_msg.precision(3);
-    oss_msg << fixed;
-    oss_msg << get_name() << " : Vmon=" << v_mon << ", Vin=" << v_in;
+    // Check if time to log voltages
+    if ( m_voltage_log_timer.get_elapsed_time() >
+	 LOG_VOLTAGES_INTERVAL ) {
 
-    redrobd_log_writeln(oss_msg.str());
+      // Log voltages
+      ostringstream oss_msg;
+      oss_msg.precision(3);
+      oss_msg << fixed;
+      oss_msg << get_name() << " : Vmon=" << v_mon << ", Vin=" << v_in;
+      
+      redrobd_log_writeln(oss_msg.str());
+      oss_msg.str("");
+
+      // Reset timer
+      if (m_voltage_log_timer.reset() != TIMER_SUCCESS) {
+	THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
+		  "Error resetting voltage log timer for thread %s",
+		  get_name().c_str());      
+      }
+    }
 
     return THREAD_SUCCESS;
   }
