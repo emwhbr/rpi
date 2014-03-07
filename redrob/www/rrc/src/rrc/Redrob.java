@@ -41,12 +41,28 @@ public class Redrob {
 	}  
     }
 
+    public enum CAMERA_CODE {
+	NONE((byte)0x00),
+	STOP_STREAM((byte)0x01),
+	START_STREAM((byte)0x02);
+
+	private final byte value;  
+  
+	private CAMERA_CODE(byte value) {  
+	    this.value = value;
+	}    
+	public byte get_value() {  
+	    return value;
+	}  
+    }
+
     private static final int CONNECT_TIMEOUT_MS = 3000;
     private static final int RECV_TIMEOUT_MS = 1000;
     private static final int SERVER_PORT = 52022;
 
-    private static final int COMMAND_STEER = 1;
+    private static final int COMMAND_STEER       = 1;
     private static final int COMMAND_GET_VOLTAGE = 2;
+    private static final int COMMAND_CAMERA      = 3;
 
     private final String m_peer_ip_address;
     private Socket m_sock;
@@ -171,6 +187,18 @@ public class Redrob {
 	//debug("get_voltage_mv : " + voltage_mv);
 
 	return voltage_mv;
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public void send_camera_code(CAMERA_CODE code) throws IOException
+    {
+	//debug("send_camera_code: " + code);
+
+	// Send command to Redrob using TCP
+	m_out.writeShort(COMMAND_CAMERA);  // Camera command
+	m_out.writeByte(code.get_value()); // Actual camera code
+	m_out.flush();
     }
 
     ////////////////////////////////////////////////////////

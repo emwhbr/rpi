@@ -52,6 +52,7 @@ DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/redrobd_rc_rf.o \
               $(OBJ_DIR)/redrobd_rc_net.o \
               $(OBJ_DIR)/redrobd_rc_net_server_thread.o \
+              $(OBJ_DIR)/redrobd_camera_ctrl.o \
               $(OBJ_DIR)/redrobd_motor_ctrl.o \
               $(OBJ_DIR)/redrobd_mc_cont_steer.o \
               $(OBJ_DIR)/redrobd_mc_non_cont_steer.o \

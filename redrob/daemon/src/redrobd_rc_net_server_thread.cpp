@@ -29,6 +29,7 @@
 // Client commands
 #define CLI_CMD_STEER        1
 #define CLI_CMD_GET_VOLTAGE  2
+#define CLI_CMD_CAMERA       3
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of types and constants
@@ -53,6 +54,7 @@ redrobd_rc_net_server_thread(string thread_name,
   // Use default mutex attributes
   pthread_mutex_init(&m_steer_code_mutex, NULL);
   pthread_mutex_init(&m_voltage_mutex, NULL);
+  pthread_mutex_init(&m_camera_code_mutex, NULL);
   
   init_members();
 }
@@ -63,6 +65,7 @@ redrobd_rc_net_server_thread::~redrobd_rc_net_server_thread(void)
 {
   pthread_mutex_destroy(&m_steer_code_mutex);
   pthread_mutex_destroy(&m_voltage_mutex);
+  pthread_mutex_destroy(&m_camera_code_mutex);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -95,6 +98,24 @@ void redrobd_rc_net_server_thread::set_voltage(float value)
 
   // Lockup set operation
   pthread_mutex_unlock(&m_voltage_mutex);
+}
+
+////////////////////////////////////////////////////////////////
+
+uint16_t redrobd_rc_net_server_thread::get_camera_code(void)
+{
+  uint16_t the_code;
+
+  // Lockdown get operation
+  pthread_mutex_lock(&m_camera_code_mutex);
+
+  the_code = m_camera_code;  
+  m_camera_code = CLI_CAMERA_NONE;
+  
+  // Lockup get operation
+  pthread_mutex_unlock(&m_camera_code_mutex);
+  
+  return the_code;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -296,6 +317,7 @@ void redrobd_rc_net_server_thread::init_members(void)
 
   m_steer_code = CLI_STEER_NONE;
   m_voltage = 0;
+  m_camera_code = CLI_CAMERA_NONE;
 
   m_server_sd = 0;
   m_client_sd = 0;
@@ -368,7 +390,6 @@ void redrobd_rc_net_server_thread::handle_clients(void)
 
 	// Handle command
 	if (client_command == CLI_CMD_STEER) {
-
 	  uint8_t steer_code;
 
 	  // Get steer code
@@ -378,10 +399,10 @@ void redrobd_rc_net_server_thread::handle_clients(void)
 	  // Update latest steer code
 	  pthread_mutex_lock(&m_steer_code_mutex);
 	  m_steer_code = steer_code;
-	  pthread_mutex_unlock(&m_steer_code_mutex);	  	  
+	  pthread_mutex_unlock(&m_steer_code_mutex);
+	  	  
 	}
 	else if (client_command == CLI_CMD_GET_VOLTAGE) {
-	  
 	  uint16_t voltage;
 
 	  // Reply with latest voltage
@@ -393,6 +414,18 @@ void redrobd_rc_net_server_thread::handle_clients(void)
 
 	  send_client((void *)&voltage,
 		      sizeof(voltage));
+	}
+	else if (client_command == CLI_CMD_CAMERA) {
+	  uint8_t camera_code;
+
+	  // Get camera code
+	  recv_client((void *)&camera_code,
+		      sizeof(camera_code));
+
+	  // Update latest camera code
+	  pthread_mutex_lock(&m_camera_code_mutex);
+	  m_camera_code = camera_code;
+	  pthread_mutex_unlock(&m_camera_code_mutex);	  	  
 	}
 	else {
 	  oss_msg << "Unknown client command : 0x"

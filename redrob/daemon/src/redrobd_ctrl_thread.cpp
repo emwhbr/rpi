@@ -166,6 +166,17 @@ long redrobd_ctrl_thread::setup(void)
     m_rc_net_auto->set_voltage(0.0);
 
     /////////////////////////////////
+    //  INITIALIZE camera control
+    /////////////////////////////////
+
+    // Create the camera control object with garbage collector
+    redrobd_camera_ctrl *cc_ptr = new redrobd_camera_ctrl();
+    m_cc_auto = auto_ptr<redrobd_camera_ctrl>(cc_ptr);
+
+    // Initialize camera control
+    m_cc_auto->initialize();
+    
+    /////////////////////////////////
     //  INITIALIZE motor control
     /////////////////////////////////
 
@@ -311,6 +322,14 @@ long redrobd_ctrl_thread::cleanup(void)
     }
 
     ////////////////////////////////////////
+    //  FINALIZE camera control
+    ////////////////////////////////////////
+
+    // Finalize and delete the camera control object
+    m_cc_auto->finalize();
+    m_cc_auto.reset();
+
+    ////////////////////////////////////////
     //  FINALIZE remote control
     ////////////////////////////////////////
 
@@ -410,28 +429,28 @@ long redrobd_ctrl_thread::cyclic_execute(void)
 
     // Do motor control
     switch (steering) {
-    case REDROBD_RC_NONE:
+    case REDROBD_RC_STEER_NONE:
       motor_control(REDROBD_MC_NONE);
       break;
-    case REDROBD_RC_FORWARD:
+    case REDROBD_RC_STEER_FORWARD:
       if (m_verbose) {
 	redrobd_log_writeln(get_name() + " : steer forward");
       }
       motor_control(REDROBD_MC_FORWARD);
       break;
-    case REDROBD_RC_REVERSE:
+    case REDROBD_RC_STEER_REVERSE:
       if (m_verbose) {
 	redrobd_log_writeln(get_name() + " : steer reverse");
       }
       motor_control(REDROBD_MC_REVERSE);
       break; 
-    case REDROBD_RC_RIGHT:      
+    case REDROBD_RC_STEER_RIGHT:      
       if (m_verbose) {
 	redrobd_log_writeln(get_name() + " : steer right");
       }
       motor_control(REDROBD_MC_RIGHT);
       break;
-    case REDROBD_RC_LEFT:
+    case REDROBD_RC_STEER_LEFT:
       if (m_verbose) {
 	redrobd_log_writeln(get_name() + " : steer left");
       }
@@ -444,8 +463,33 @@ long redrobd_ctrl_thread::cyclic_execute(void)
 	       << " : Got undefined steering = 0x"
 	       << hex << setw(4) << setfill('0') << (unsigned)steering;
        redrobd_log_writeln(oss_msg.str());
+       oss_msg.str("");
 
        motor_control(REDROBD_MC_STOP); 
+    }
+
+    // Check remote control camera code
+    uint16_t camera_code = m_rc_net_auto->get_camera_code();
+
+    // Do camera control
+    switch (camera_code) {
+    case REDROBD_RC_CAMERA_NONE:
+      camera_control(REDROBD_CC_NONE);
+      break;
+    case REDROBD_RC_CAMERA_STOP_STREAM:
+      camera_control(REDROBD_CC_STOP_STREAM);
+      break;
+    case REDROBD_RC_CAMERA_START_STREAM:
+      camera_control(REDROBD_CC_START_STREAM);
+      break; 
+    default:
+      // All other camera codes are ignored for now
+       ostringstream oss_msg;
+       oss_msg << get_name()
+	       << " : Got undefined camera code = 0x"
+	       << hex << setw(4) << setfill('0') << (unsigned)steering;
+       redrobd_log_writeln(oss_msg.str());
+       oss_msg.str("");
     }
 
     return THREAD_SUCCESS;
@@ -472,6 +516,7 @@ void redrobd_ctrl_thread::init_members(void)
   m_bat_mon_thread_auto.reset();
   m_rc_rf_auto.reset();
   m_rc_net_auto.reset();
+  m_cc_auto.reset();
   m_mc_cont_steer_auto.reset();
   m_mc_non_cont_steer_auto.reset();
 
@@ -603,7 +648,7 @@ uint16_t redrobd_ctrl_thread::get_remote_steering(void)
     }
   }
   else {
-    steering = REDROBD_RC_NONE;
+    steering = REDROBD_RC_STEER_NONE;
     if (m_verbose) {
       redrobd_log_writeln(get_name() + " : remote NONE active");
     }
@@ -622,4 +667,11 @@ void redrobd_ctrl_thread::motor_control(uint16_t steer_code)
   else {
     m_mc_non_cont_steer_auto->steer(steer_code);
   }
+}
+
+////////////////////////////////////////////////////////////////
+
+void redrobd_ctrl_thread::camera_control(uint16_t camera_code)
+{
+  m_cc_auto->command(camera_code);
 }

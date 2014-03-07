@@ -20,11 +20,11 @@ using namespace std;
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 // Steer codes
-#define REDROBD_RC_NONE     0x00
-#define REDROBD_RC_FORWARD  0x01
-#define REDROBD_RC_REVERSE  0x02
-#define REDROBD_RC_RIGHT    0x04
-#define REDROBD_RC_LEFT     0x08
+#define REDROBD_RC_STEER_NONE     0x00
+#define REDROBD_RC_STEER_FORWARD  0x01
+#define REDROBD_RC_STEER_REVERSE  0x02
+#define REDROBD_RC_STEER_RIGHT    0x04
+#define REDROBD_RC_STEER_LEFT     0x08
 
 /////////////////////////////////////////////////////////////////////////////
 //               Class support types

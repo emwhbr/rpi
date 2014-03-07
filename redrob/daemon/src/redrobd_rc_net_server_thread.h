@@ -31,6 +31,11 @@ using namespace std;
 #define CLI_STEER_RIGHT    0x04
 #define CLI_STEER_LEFT     0x08
 
+// Client camera codes
+#define CLI_CAMERA_NONE          0x00
+#define CLI_CAMERA_STOP_STREAM   0x01
+#define CLI_CAMERA_START_STREAM  0x02
+
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of classes
 /////////////////////////////////////////////////////////////////////////////
@@ -47,6 +52,8 @@ class redrobd_rc_net_server_thread : public thread {
   uint16_t get_steer_code(void);
 
   void set_voltage(float value);
+
+  uint16_t get_camera_code(void);
 
   void shutdown_server(void);
 
@@ -79,6 +86,10 @@ class redrobd_rc_net_server_thread : public thread {
   // Latest voltage
   pthread_mutex_t m_voltage_mutex;
   uint16_t        m_voltage;
+
+  // Latest client camera code
+  pthread_mutex_t m_camera_code_mutex;
+  uint16_t        m_camera_code;
 
   void init_members(void);
 

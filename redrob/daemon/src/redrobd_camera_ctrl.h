@@ -9,15 +9,10 @@
 // *                                                                      *
 // ************************************************************************
 
-#ifndef __REDROBD_RC_NET_H__
-#define __REDROBD_RC_NET_H__
+#ifndef __REDROBD_CAMERA_CTRL_H__
+#define __REDROBD_CAMERA_CTRL_H__
 
-#include <string>
 #include <stdint.h>
-#include <memory>
-
-#include "redrobd_remote_ctrl.h"
-#include "redrobd_rc_net_server_thread.h"
 
 using namespace std;
 
@@ -25,45 +20,44 @@ using namespace std;
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
 // Camera codes
-#define REDROBD_RC_CAMERA_NONE          0x00
-#define REDROBD_RC_CAMERA_STOP_STREAM   0x01
-#define REDROBD_RC_CAMERA_START_STREAM  0x02
+#define REDROBD_CC_NONE          0x00
+#define REDROBD_CC_STOP_STREAM   0x01
+#define REDROBD_CC_START_STREAM  0x02
 
 /////////////////////////////////////////////////////////////////////////////
 //               Class support types
 /////////////////////////////////////////////////////////////////////////////
+// States for the state machine
+typedef enum {CC_STATE_INIT,
+	      CC_STATE_ACTIVE,
+	      CC_STATE_DEACTIVE} CC_STATE;
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of classes
 /////////////////////////////////////////////////////////////////////////////
 
-class redrobd_rc_net : public redrobd_remote_ctrl {
+class redrobd_camera_ctrl {
   
  public:
-  redrobd_rc_net(string server_ip_address,
-		 uint16_t server_port);
+  redrobd_camera_ctrl(void);
 
-  ~redrobd_rc_net(void);
+  ~redrobd_camera_ctrl(void);
 
-  // Implements pure virtual functions from base class
-  virtual void initialize(void);
-  virtual void finalize(void);
-  virtual uint16_t get_steering(void);
+  void initialize(void);
+  void finalize(void);
 
-  void set_voltage(float value);
-
-  uint16_t get_camera_code(void);
-
-  void server_thread_check(void);
+  void command(uint16_t code);
 
  private:
-  string   m_server_ip_address;
-  uint16_t m_server_port;
-
-  // The server thread object
-  auto_ptr<redrobd_rc_net_server_thread> m_server_thread_auto;
+  // Keep track of the state machine  
+  CC_STATE m_current_state;
 
   void init_members(void);
+
+  bool check_camera_code(uint16_t code);
+
+  void stop_stream(void);
+  void start_stream(void);  
 };
 
-#endif // __REDROBD_RC_NET_H__
+#endif // __REDROBD_CAMERA_CTRL_H__

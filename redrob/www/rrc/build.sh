@@ -10,6 +10,10 @@
 #  *                                                                      *
 #  ************************************************************************/
 
+export JAVA_HOME=/opt/java/jdk1.7.0_51
+export CLASSPATH="${JAVA_HOME}/jre/lib/plugin.jar"
+export PATH=${JAVA_HOME}/bin:${PATH}
+
 CLASSES_DIR="./classes"
 DIST_DIR="./dist"
 HTML_DIR="./html"
@@ -20,7 +24,7 @@ SIM_DIR="./sim"
 case "$1" in
     applet)
         echo "==[APPLET]==="
-	javac -cp ${CLASSES_DIR} \
+	javac -cp ${CLASSES_DIR} -cp ${CLASSPATH}\
               -d ${CLASSES_DIR} \
 	      -sourcepath ${SRC_DIR}/rrc \
               ${SRC_DIR}/rrc/*.java

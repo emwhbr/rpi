@@ -19,6 +19,7 @@
 #include "redrobd_voltage_monitor_thread.h"
 #include "redrobd_rc_rf.h"
 #include "redrobd_rc_net.h"
+#include "redrobd_camera_ctrl.h"
 #include "redrobd_mc_cont_steer.h"
 #include "redrobd_mc_non_cont_steer.h"
 #include "mcp3008_io.h"
@@ -61,6 +62,9 @@ class redrobd_ctrl_thread : public cyclic_thread {
   // Remote control object (NET, Sockets)
   auto_ptr<redrobd_rc_net> m_rc_net_auto;
 
+  // Camera control object
+  auto_ptr<redrobd_camera_ctrl> m_cc_auto;
+
   // Motor control object (continuous steer)
   auto_ptr<redrobd_mc_cont_steer> m_mc_cont_steer_auto;
 
@@ -92,6 +96,8 @@ class redrobd_ctrl_thread : public cyclic_thread {
   uint16_t get_remote_steering(void);
 
   void motor_control(uint16_t steer_code);
+
+  void camera_control(uint16_t camera_code);
 };
 
 #endif // __REDROBD_CTRL_THREAD_H__

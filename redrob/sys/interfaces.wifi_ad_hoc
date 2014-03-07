@@ -1,0 +1,21 @@
+auto lo
+iface lo inet loopback
+
+# EMWHBR, 2013-12-21: Set static IP (RedRob)
+#iface eth0 inet dhcp
+iface eth0 inet static
+address 192.168.100.69
+netmask 255.255.255.0
+gateway 192.168.100.17
+
+# EMWHBR: allow-hotplug didn't work
+#allow-hotplug wlan0
+auto wlan0
+
+# EMWHBR: 2014-02-26: Ad-hoc network
+iface wlan0 inet static
+address 192.168.200.69
+netmask 255.255.255.0
+wireless-channel 10
+wireless-essid REDROBNET
+wireless-mode ad-hoc

@@ -12,12 +12,13 @@
 -->
 <html>
   <head>
+    <meta http-equiv="content-type" content="text/html; charset=iso-8859-15" />
+    <meta http-equiv="content-language" content="en" />
     <title>Redrob Remote Control</title>
   </head>
-  <h2> Redrob Remote Control </h2>
   <body>
-    <div style="height: 220;
-		width: 500;
+    <div style="width: 500;
+		height: 220;
 		color: blue;
 		background-color: white; 
 		border: 2px solid black;
@@ -29,6 +30,7 @@
     <applet       
        code="rrc/AppletRrc"
        archive="rrc.jar"
+       id="AppletRedrobRemoteCtrl"
        width="500"
        height="220">
     </applet>
@@ -38,10 +40,273 @@
        codetype="application/java"
        classid="java:rrc/AppletRrc"
        archive="rrc.jar"
+       id="AppletRedrobRemoteCtrl"
        width="500"
        height="220">
     </object>
 -->
+    </div>
+
+    <div style="width: 500;
+		height: 240;
+		color: blue;
+		background-color: black; 
+		border: 2px solid green;
+		padding: 0px;">
+
+      <!-- Embedded VLC plugin -->
+      <embed type="application/x-vlc-plugin"
+	     pluginspage="http://www.videolan.org"
+             id="redrob_video"
+	     allowfullscreen="false"
+             autoplay="false"
+	     loop="false"
+	     mute="true"
+	     toolbar="false"
+	     width="500"
+             height="240"/>
+    </div>
+
+    <!-- Embedded VLC plugin buttons -->
+    <input type="button" id="butPlay"    value="Play"    onclick="do_vlc_play();" />
+    <input type="button" id="butPause"   value="Pause"   onclick="do_vlc_pause();" />
+    <input type="button" id="butStop"    value="Stop"    onclick="do_vlc_stop();" />
+    <input type="button" id="butVersion" value="Version" onclick="do_vlc_version();" />
+
+    <script language="Javascript">
+
+      // Create global VLC plugin object
+      vlc = document.getElementById("redrob_video");
+
+      /*-- -------------------------------------------------------------
+        -- Function: set_vlc_toolbar_state
+	--
+	-- Description: Enables/disables the vlc toolbar buttons
+        -- (play, pause and stop). This function is called by applet.
+	--
+	-- Parameters: state  Set to 'enable' to enable,
+        --                    otherwise 'disable'
+	--
+	-- Returns: -
+	-- -------------------------------------------------------------*/
+      function set_vlc_toolbar_state(state) {
+
+      if (state == "enable") {
+      document.getElementById("butPlay").disabled = false;
+      document.getElementById("butPause").disabled = false;
+      document.getElementById("butStop").disabled = false;
+      }
+      else {
+      document.getElementById("butPlay").disabled = true;
+      document.getElementById("butPause").disabled = true;
+      document.getElementById("butStop").disabled = true;
+      }
+      }
+
+      /*-- -------------------------------------------------------------
+        -- Function: do_vlc_play
+	--
+	-- Description: Create (or resume) playlist video stream.
+	--
+	-- Parameters: None
+	--
+	-- Returns: -
+	-- -------------------------------------------------------------*/
+      function do_vlc_play() {
+      if (!vlc) {
+          alert("Got no VLC object");
+      }
+
+      // Check if playlist is empty
+      if (vlc.playlist.items.count == 0) {
+          // Add playlist item
+          var my_ip = location.host;
+          var mrl =  "rtsp://" + my_ip + ":8554/";
+          var name = "redrob-live-stream";
+          var options = new Array(":network-caching=250");
+          var id = vlc.playlist.add(mrl, name, options);
+
+          // Play item
+          vlc.playlist.playItem(id);
+      }
+      else {
+          // Play current item
+          vlc.playlist.play();
+      }
+      }
+
+     /*-- -------------------------------------------------------------
+        -- Function: do_vlc_pause
+	--
+	-- Description: Pause playlist video stream.
+	--
+	-- Parameters: None
+	--
+	-- Returns: -
+	-- -------------------------------------------------------------*/
+      function do_vlc_pause() {
+      if (!vlc) {
+          alert("Got no VLC object");
+      }
+      vlc.playlist.pause();
+      }
+
+      /*-- -------------------------------------------------------------
+        -- Function: do_vlc_stop
+	--
+	-- Description: Stop and delete playlist video stream.
+	--
+	-- Parameters: None
+	--
+	-- Returns: -
+	-- -------------------------------------------------------------*/
+      function do_vlc_stop() {
+
+      if (!vlc) {
+          alert("Got no VLC object");
+      }
+      vlc.playlist.stop();
+      vlc.playlist.items.clear();
+      }
+
+      /*-- -------------------------------------------------------------
+        -- Function: do_vlc_version
+	--
+	-- Description: Get VLC version information.
+	--
+	-- Parameters: None
+	--
+	-- Returns: -
+	-- -------------------------------------------------------------*/
+      function do_vlc_version() {
+
+      if (!vlc) {
+          alert("Got no VLC object");
+      }
+      else {
+          alert("VLC version: " + vlc.versionInfo());
+      }
+      }
+
+      /*-- -------------------------------------------------------------
+        -- Function: get_vlc_state
+	--
+	-- Description: Returns the current state for VLC plugin.
+	--
+	-- Parameters: None
+	--
+	-- Returns: The current state (string).
+	-- -------------------------------------------------------------*/
+      function get_vlc_state() {
+      if (!vlc) {
+      return "N/A";
+      }
+
+      var state;
+
+      switch (vlc.input.state) {
+      case 0:
+      state = "Idle";
+      break;
+      case 1:
+      state = "Opening";
+      break;
+      case 2:
+      state = "Buffering";
+      break;
+      case 3:
+      state = "Playing";
+      break;
+      case 4:
+      state = "Paused";
+      break;
+      case 5:
+      state = "Stopping";
+      break;
+      case 6:
+      state = "Ended";
+      break;
+      case 7:
+      state = "Error";
+      break;
+      default:
+      state = "Unknown";
+      }
+      
+      return state;
+      }
+      
+      /*-- -------------------------------------------------------------
+	-- Function: video_status
+	--
+	-- Description: Update status information for video stream 
+	--              in VLC plugin.
+	--
+	-- Parameters: None
+	--
+	-- Returns: -
+	-- -------------------------------------------------------------*/
+      function video_status() {
+
+      if (!vlc) {
+          alert("Got no VLC object");
+          return;
+      }
+
+      play_status.innerHTML = vlc.input.hasVout ? "Video playing" : "Video not playing";
+
+      // Check if video is beeing displayed
+      if (vlc.input.hasVout) {
+          // Update time
+          got_time = vlc.input.time / 1000;
+          got_time = Math.floor(got_time);
+          hours = Math.floor(got_time / 3600);
+	  minutes = Math.floor((got_time / 60) % 60);
+	  seconds = got_time % 60;
+          if ( hours < 10 )   {hours = "0" + hours};
+	  if ( minutes < 10 ) {minutes = "0" + minutes};
+	  if ( seconds < 10 ) {seconds = "0" + seconds};
+	  time.innerHTML = hours+":"+minutes+":"+seconds;                   
+      }
+      else {
+          time.innerHTML  = "N/A";
+      }
+
+      // Update state
+      state.innerHTML = get_vlc_state();
+
+      setTimeout('video_status()', 100);
+      }
+    </script>
+
+    <div class="content">
+      <table style="width:650px;table-layout:fixed">
+	<col width=75>
+	<col width=180>
+	<col width=55>
+	<col width=100>
+	<col width=60>
+	<col width=180>
+	<tr>
+	  <td>Status:</td>
+	  <td><span id="play_status" >Unknown</span></td>
+	  <td>Time:</td>
+	  <td><span id="time" >N/A</span></td>
+	  <td>State:</td>
+	  <td><span id="state" >N/A</span></td>
+	</tr>
+      </table>
+    </div>
+
+    <script language="Javascript">
+      // Disable vlc toolbar.
+      // Toolbar is also enabled/disabled by applet.
+      set_vlc_toolbar_state("disable");
+      
+      // Define periodic callback
+      setTimeout('video_status()', 100);
+    </script>
+
     </div>
     <br>
     &#169 2014 Bonden i Nol.<br>

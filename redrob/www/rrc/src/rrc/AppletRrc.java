@@ -11,11 +11,13 @@
 
 package rrc;
 
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonModel;
 import javax.swing.ImageIcon;
 import javax.swing.JApplet;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -37,10 +39,13 @@ import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map;
 
+import netscape.javascript.JSObject;
+import netscape.javascript.JSException;
+
 public class AppletRrc extends JApplet implements Runnable {
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A02";
+    private static final String PROD_REV  = "R1A03";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
@@ -51,15 +56,18 @@ public class AppletRrc extends JApplet implements Runnable {
 
     private Redrob m_redrob;
 
+    private JSObject m_jso;
+
     private enum THREAD_CMD {NONE,
 			     CONNECT,
 			     DISCONNECT,
-			     STEER};
+			     STEER,
+                             VIDEO};
 
     private Thread m_main_thread;
     private boolean m_main_thread_running;
     private THREAD_CMD m_main_thread_cmd;
-    private static final int MAIN_THREAD_PERIOD_TIME_MS = 200;
+    private static final int MAIN_THREAD_PERIOD_TIME_MS = 80; // 12.5 Hz
 
     private JPanel m_content;    
 
@@ -76,6 +84,8 @@ public class AppletRrc extends JApplet implements Runnable {
     private ImageIcon m_connected_icon;
     private ImageIcon m_disconnected_icon;
 
+    private JCheckBox m_video_checkbox;
+
     private VoltageBar m_voltage_bar;
     private JLabel m_voltage_label;
     private JLabel m_voltage_value_label;
@@ -85,7 +95,7 @@ public class AppletRrc extends JApplet implements Runnable {
     private boolean m_first_voltage_value;
 
     private static final String NO_VOLTAGE_VALUE = "N/A";
-    private static final long VOLTAGE_UPDATE_TIME = 1000; // ms
+    private static final long VOLTAGE_UPDATE_TIME = 250; // ms
 
     private static final int MIN_BAR_VOLTAGE = 6000; // mV
     private static final int MAX_BAR_VOLTAGE = 7500; // mV
@@ -110,6 +120,8 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	m_redrob = new Redrob(getCodeBase().getHost());
 
+	m_jso = JSObject.getWindow(this); // Interface to javascript
+                                          // in same HTML page as applet
 	m_is_connected = false;
 
 	m_voltage_format = new DecimalFormat("00.000");
@@ -148,8 +160,12 @@ public class AppletRrc extends JApplet implements Runnable {
     @Override
     public void stop()
     {
-        //debug("stop... ");
+        //debug("stop...");
+
 	if (m_is_connected) {
+
+	    m_main_thread_running = false;
+
 	    try {
 		m_redrob.disconnect();
 	    }
@@ -201,6 +217,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	    case STEER:
 		do_command_steer();
 		break;
+	    case VIDEO:
+		do_command_video();
+		break;
 	    }	    
 
 	    // Take it easy
@@ -245,6 +264,7 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_main_thread_cmd = THREAD_CMD.NONE; // Clear command
 
 	try {
+	    // Do connect
 	    m_redrob.connect();
 	    m_is_connected = true; // Mark as connected
 
@@ -253,6 +273,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_reverse_button.setEnabled(true);
 	    m_right_button.setEnabled(true);
 	    m_left_button.setEnabled(true);
+
+	    // Enable video stream checkbox
+	    m_video_checkbox.setEnabled(true);	    
 
 	    // Enable disconnect button, disable connect button
 	    m_connect_button.setEnabled(false);
@@ -276,8 +299,27 @@ public class AppletRrc extends JApplet implements Runnable {
     private void do_command_disconnect()
     {
 	m_main_thread_cmd = THREAD_CMD.NONE; // Clear command
-	
-	try {	    
+
+	try {
+	    // Stop video stream if started
+	    if (m_video_checkbox.isSelected()) {
+		m_redrob.send_camera_code(Redrob.CAMERA_CODE.STOP_STREAM);
+		m_video_checkbox.setSelected(false);
+
+		// Call javascript's method to disable vlc toolbar
+		try {
+		    m_jso.call("set_vlc_toolbar_state",
+			       new String[]{"disable"});
+		}
+		catch (JSException exp) {
+		    StringWriter sw = new StringWriter();
+		    PrintWriter pw = new PrintWriter(sw);
+		    exp.printStackTrace(pw);
+		    err_msg_box(exp.getMessage() + "\n" + sw);
+		}
+	    }
+
+	    // Do disconnect
 	    m_redrob.disconnect();
 	    m_is_connected = false; // Mark as NOT connected
 
@@ -286,6 +328,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_reverse_button.setEnabled(false);
 	    m_right_button.setEnabled(false);
 	    m_left_button.setEnabled(false);
+
+	    // Disable video stream checkbox
+	    m_video_checkbox.setEnabled(false);
 
 	    // Enable connect button, disable disconnect button
 	    m_connect_button.setEnabled(true);
@@ -347,6 +392,29 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	    // Update voltage value
 	    update_voltage();
+	}
+	catch(IOException exp) {
+	    StringWriter sw = new StringWriter();
+	    PrintWriter pw = new PrintWriter(sw);
+	    exp.printStackTrace(pw);
+	    err_msg_box(exp.getMessage() + "\n" + sw);
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void do_command_video()
+    {
+	m_main_thread_cmd = THREAD_CMD.NONE; // Clear command
+	
+	try {
+	    // Start/stop video stream
+	    if (m_video_checkbox.isSelected()) {
+		m_redrob.send_camera_code(Redrob.CAMERA_CODE.START_STREAM);
+	    }
+	    else {
+		m_redrob.send_camera_code(Redrob.CAMERA_CODE.STOP_STREAM);
+	    }
 	}
 	catch(IOException exp) {
 	    StringWriter sw = new StringWriter();
@@ -459,6 +527,44 @@ public class AppletRrc extends JApplet implements Runnable {
     }
 
     ////////////////////////////////////////////////////////
+    private void video_checkbox_action_performed(ActionEvent e)
+    {
+	AbstractButton abstractButton = (AbstractButton) e.getSource();
+        if (abstractButton.getModel().isSelected()) {
+	    //debug("VIDEO CHECKBOX - SELECTED");
+	    
+	    // Call javascript's method to enable vlc toolbar
+	    try {
+		m_jso.call("set_vlc_toolbar_state",
+			   new String[]{"enable"});
+	    }
+	    catch (JSException exp) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		exp.printStackTrace(pw);
+		err_msg_box(exp.getMessage() + "\n" + sw);
+	    }
+	}
+	else {
+	    //debug("VIDEO CHECKBOX - NOT SELECTED");
+
+	    // Call javascript's method to disable vlc toolbar
+	    try {
+		m_jso.call("set_vlc_toolbar_state",
+			   new String[]{"disable"});
+	    }
+	    catch (JSException exp) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		exp.printStackTrace(pw);
+		err_msg_box(exp.getMessage() + "\n" + sw);
+	    }
+	}
+
+	m_main_thread_cmd = THREAD_CMD.VIDEO;
+    }
+
+    ////////////////////////////////////////////////////////
 
     private void init_gui() throws Exception
     {
@@ -545,8 +651,23 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	m_connected_state_label = new JLabel();
 	m_connected_state_label.setIcon(m_disconnected_icon);
-	m_connected_state_label.setBounds(10, 10, 30, 30);
+	m_connected_state_label.setBounds(10, 10, 30, 30);	
 	m_content.add(m_connected_state_label);
+
+	// Create the video stream checkbox
+	m_video_checkbox = new JCheckBox("Redcam");
+	m_video_checkbox.addActionListener(new ActionListener()
+	    {
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    video_checkbox_action_performed(e);
+		}
+	    });
+	m_video_checkbox.setBounds(10, 105, 85, 20);
+	m_video_checkbox.setSelected(false);
+	m_video_checkbox.setEnabled(false);
+	m_content.add(m_video_checkbox);
 
 	// Create the battery voltage labels
 	m_voltage_label = new JLabel("Battery voltage :");

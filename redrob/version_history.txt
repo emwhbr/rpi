@@ -1,4 +1,49 @@
 ===========================================================================
+2014-03-08
+
+* Added Raspberry Pi Camera module (Rev 1.3).
+
+* Replaced consumer 6xAA batteries (NiMH GP 2700 mA) with an integrated
+  6 cell battery pack (NiMH 3000 mA). 
+
+* Redrob daemon
+  - R1A11
+  - Added support for streaming video using RASPIVID and VLC.
+  - Default frequency for controller thread is now 10.0 Hz.
+
+* Redrob Remote Control
+  - R1A03
+  - Now using JDK 7u51 (Oracle).
+  - Added control for streaming video.
+  - Main thread frequency is now 12.5 Hz.
+  - Voltage update time is now 250 ms.
+  - Applet is now capable of calling Java script to control HTML page.
+  - Updated target simulator.
+
+* HTML
+  - Added VLC plugin for reception of streaming video from target.
+  - Added Java script for control of VLC plugin.
+
+===========================================================================
+
+===========================================================================
+2014-02-26
+
+* Replaced Wifi-USB dongle to support Ad-Hoc mode.
+  Old device: TP-LINK, Model: TL-WN723N (ver 3.0), chipset: 8188eu
+  New device: Zyxel,   Model: NWD2205,             chipset: 8192cu
+
+* Tested Ad-Hoc mode [OK], range > 5 m.
+  Network created first by laptop Dell Latitude E6530 (Arch Linux).
+  Static IP.
+
+* Tested infrastructure mode [OK].
+  Network router D-LINK DIR-655.
+  DHCP.
+
+===========================================================================
+
+===========================================================================
 2014-02-21
 
 * Built web server (LIGHTTPD) for ARM, installed on RPi target.

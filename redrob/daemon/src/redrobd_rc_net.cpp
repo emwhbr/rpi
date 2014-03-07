@@ -121,7 +121,7 @@ uint16_t redrobd_rc_net::get_steering(void)
   steering = m_server_thread_auto->get_steer_code();
 
   // It requires at least one steering to be considered activated
-  if ( (!is_active()) && (steering != REDROBD_RC_NONE) ) {
+  if ( (!is_active()) && (steering != REDROBD_RC_STEER_NONE) ) {
     set_active(true);
   }
 
@@ -133,6 +133,15 @@ uint16_t redrobd_rc_net::get_steering(void)
 void redrobd_rc_net::set_voltage(float value)
 {
   m_server_thread_auto->set_voltage(value);
+}
+
+////////////////////////////////////////////////////////////////
+
+uint16_t redrobd_rc_net::get_camera_code(void)
+{
+  // Get latest camera code from client
+  // We know that camera codes can be directly translated
+  return m_server_thread_auto->get_camera_code();
 }
 
 ////////////////////////////////////////////////////////////////

@@ -22,8 +22,9 @@ class RedrobSim {
 
     private static final int SERVER_PORT = 52022;
 
-    private static final int COMMAND_STEER = 1;
+    private static final int COMMAND_STEER       = 1;
     private static final int COMMAND_GET_VOLTAGE = 2;
+    private static final int COMMAND_CAMERA      = 3;
 
     private static ServerSocket m_server_sock;
     private static Socket m_client_sock;
@@ -88,6 +89,12 @@ class RedrobSim {
 			    if (voltage > 7.4) {
 				voltage_delta = (float)-0.1;
 			    }			    
+			}
+			else if (command == COMMAND_CAMERA) {
+			    debug("Got CAMERA command");
+
+			    byte camera_code = m_in.readByte();
+			    debug("    camera code " + camera_code);
 			}
 			else {
 			    debug("*** Unknown command : " + command);

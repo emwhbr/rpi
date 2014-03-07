@@ -77,26 +77,26 @@ void redrobd_rc_rf::finalize(void)
 
 uint16_t redrobd_rc_rf::get_steering(void)
 {
-  uint16_t steering = REDROBD_RC_NONE;
+  uint16_t steering = REDROBD_RC_STEER_NONE;
 
   if ( redrobd_gpio_get_pin(m_pin_forward) ) {
-    steering |= REDROBD_RC_FORWARD;
+    steering |= REDROBD_RC_STEER_FORWARD;
   }
 
   if ( redrobd_gpio_get_pin(m_pin_reverse) ) {
-    steering |= REDROBD_RC_REVERSE;
+    steering |= REDROBD_RC_STEER_REVERSE;
   }
 
   if ( redrobd_gpio_get_pin(m_pin_right) ) {
-    steering |= REDROBD_RC_RIGHT;
+    steering |= REDROBD_RC_STEER_RIGHT;
   }
 
   if ( redrobd_gpio_get_pin(m_pin_left) ) {
-    steering |= REDROBD_RC_LEFT;
+    steering |= REDROBD_RC_STEER_LEFT;
   }
 
   // It requires at least one steering to be considered activated
-  if ( (!is_active()) && (steering != REDROBD_RC_NONE) ) {
+  if ( (!is_active()) && (steering != REDROBD_RC_STEER_NONE) ) {
     set_active(true);
   }
 

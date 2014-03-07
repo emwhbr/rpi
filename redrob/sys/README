@@ -1,6 +1,10 @@
 FILE			PATH ON RPI TARGET
 -----------------------------------------------------------
+raspi-blacklist.conf	/etc/modprobe.d/raspi-blacklist.conf
 modules			/etc/modules
-raspi-blacklist.conf	/export/rpi/raspi-blacklist.conf
+interfaces.wifi_ad_hoc	/etc/network/interfaces
+interfaces.wifi_infra	/etc/network/interfaces
 rc.local		/etc/rc.local
+
 redrobd.sh		/proj/redrob/redrobd.sh
+rpi_video_stream.sh     /proj/redrob/video_stream/rpi_video_stream.sh
