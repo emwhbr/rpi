@@ -42,6 +42,8 @@
 
 #define BAT_MIN_ALLOWED_VOLTAGE  6.9 // Volt
 
+#define SYS_STAT_CHECK_FREQUENCY  1.0 // Hz
+
 #define RC_NET_SERVER_IP    ANY_IP_ADDRESS
 #define RC_NET_SERVER_PORT  52022
 
@@ -259,6 +261,13 @@ long redrobd_ctrl_thread::setup(void)
 		get_name().c_str());      
     }
 
+    // Start timer controlling when to check system stats
+    if (m_sys_stat_check_timer.reset() != TIMER_SUCCESS) {
+      THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
+		"Error resetting system stats check timer for thread %s",
+		get_name().c_str());      
+    }
+
     redrobd_log_writeln(get_name() + " : setup done");
 
     return THREAD_SUCCESS;    
@@ -421,6 +430,9 @@ long redrobd_ctrl_thread::cyclic_execute(void)
       redrobd_led_bat_low(false);  // Turn status LED off
     }
 
+    // Check system stats
+    check_system_stats();
+
     // Check state and status of created threads
     check_thread_run_status();
 
@@ -564,6 +576,72 @@ bool redrobd_ctrl_thread::battery_voltage_ok(void)
   }
 
   return battery_ok;
+}
+
+////////////////////////////////////////////////////////////////
+
+void redrobd_ctrl_thread::check_system_stats(void)
+{
+  if ( m_sys_stat_check_timer.get_elapsed_time() > 
+	 (1.0/SYS_STAT_CHECK_FREQUENCY) ) {
+
+    long rc;
+
+    // Get system stats
+    float cpu_load;
+    unsigned mem_used;
+    unsigned irq;
+    unsigned uptime;
+
+    rc = m_sys_stat.get_interval_cpu_load(cpu_load);
+    if (rc != SYS_STAT_SUCCESS) {      
+      cpu_load = 0;
+    }
+
+    rc = m_sys_stat.get_mem_used_kb(mem_used);
+    if (rc != SYS_STAT_SUCCESS) {
+      mem_used = 0;
+    }
+
+    rc = m_sys_stat.get_interval_irq(irq);
+    if (rc != SYS_STAT_SUCCESS) {
+      irq = 0;
+    }
+
+    rc = m_sys_stat.get_uptime_sec(uptime);
+    if (rc != SYS_STAT_SUCCESS) {
+      uptime = 0;
+    }
+
+    // Reset system stats interval
+    rc = m_sys_stat.reset_interval_cpu_load();
+    if (rc != SYS_STAT_SUCCESS) {
+      if (rc != SYS_STAT_SUCCESS) {
+	THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_SYS_STAT_OPERATION_FAILED,
+		"Error resetting system stats interval(cpu_load) for thread %s",
+		get_name().c_str());  
+      }
+    }
+
+    rc = m_sys_stat.reset_interval_irq();
+    if (rc != SYS_STAT_SUCCESS) {
+      THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_SYS_STAT_OPERATION_FAILED,
+		"Error resetting system stats interval(irq) for thread %s",
+		get_name().c_str());  
+    }
+
+    // Update system stats for remote control (NET, Sockets)
+    m_rc_net_auto->set_sys_stat((uint8_t)cpu_load,
+				(uint32_t)mem_used,
+				(uint16_t)irq,
+				(uint32_t)uptime);        
+    // Reset timer
+    if (m_sys_stat_check_timer.reset() != TIMER_SUCCESS) {
+      THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
+		"Error resetting system stats check timer for thread %s",
+		get_name().c_str());   
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////

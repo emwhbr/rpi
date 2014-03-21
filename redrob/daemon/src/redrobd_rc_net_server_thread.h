@@ -37,6 +37,16 @@ using namespace std;
 #define CLI_CAMERA_START_STREAM  0x02
 
 /////////////////////////////////////////////////////////////////////////////
+//               Class support types
+/////////////////////////////////////////////////////////////////////////////
+typedef struct {
+  uint8_t  cpu_load;
+  uint32_t mem_used;
+  uint16_t irq;
+  uint32_t uptime;
+} __attribute__((packed)) RC_NET_SYS_STAT;
+
+/////////////////////////////////////////////////////////////////////////////
 //               Definition of classes
 /////////////////////////////////////////////////////////////////////////////
 
@@ -54,6 +64,8 @@ class redrobd_rc_net_server_thread : public thread {
   void set_voltage(float value);
 
   uint16_t get_camera_code(void);
+
+  void set_sys_stat(const RC_NET_SYS_STAT *sys_stat);
 
   void shutdown_server(void);
 
@@ -90,6 +102,10 @@ class redrobd_rc_net_server_thread : public thread {
   // Latest client camera code
   pthread_mutex_t m_camera_code_mutex;
   uint16_t        m_camera_code;
+
+  // Latest system statistics
+  pthread_mutex_t m_sys_stat_mutex;
+  RC_NET_SYS_STAT m_sys_stat;
 
   void init_members(void);
 

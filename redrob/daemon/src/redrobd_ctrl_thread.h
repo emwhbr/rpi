@@ -25,6 +25,7 @@
 #include "mcp3008_io.h"
 #include "redrobd_hw_cfg.h"
 #include "timer.h"
+#include "sys_stat.h"
 
 using namespace std;
 
@@ -81,6 +82,10 @@ class redrobd_ctrl_thread : public cyclic_thread {
   timer m_battery_check_timer;
   bool  m_battery_check_allowed;
 
+  // Controls system statistics check
+  sys_stat m_sys_stat;
+  timer    m_sys_stat_check_timer;
+
   // Controls shutdown
   bool m_shutdown_select;
 
@@ -90,6 +95,8 @@ class redrobd_ctrl_thread : public cyclic_thread {
   void init_members(void);
 
   bool battery_voltage_ok(void);
+
+  void check_system_stats(void);
 
   void check_thread_run_status(void);
 

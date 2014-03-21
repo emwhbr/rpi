@@ -22,9 +22,10 @@ class RedrobSim {
 
     private static final int SERVER_PORT = 52022;
 
-    private static final int COMMAND_STEER       = 1;
-    private static final int COMMAND_GET_VOLTAGE = 2;
-    private static final int COMMAND_CAMERA      = 3;
+    private static final int COMMAND_STEER         = 1;
+    private static final int COMMAND_GET_VOLTAGE   = 2;
+    private static final int COMMAND_CAMERA        = 3;
+    private static final int COMMAND_GET_SYS_STATS = 4;
 
     private static ServerSocket m_server_sock;
     private static Socket m_client_sock;
@@ -40,6 +41,8 @@ class RedrobSim {
 
 	float voltage = (float)7.2;
 	float voltage_delta = (float)-0.1;
+
+	int uptime = 0;
 	
 	try {
 	    // Create and bind server socket
@@ -86,7 +89,7 @@ class RedrobSim {
 			    if (voltage < 6.1) {
 				voltage_delta = (float)0.1;
 			    }
-			    if (voltage > 7.4) {
+			    if (voltage > 8.4) {
 				voltage_delta = (float)-0.1;
 			    }			    
 			}
@@ -95,6 +98,19 @@ class RedrobSim {
 
 			    byte camera_code = m_in.readByte();
 			    debug("    camera code " + camera_code);
+			}
+			else if (command == COMMAND_GET_SYS_STATS) {
+			    debug("Got SYS_STATS command");
+
+			    // Reply with system statistics
+			    m_out.writeByte(50);
+			    m_out.writeInt(4096);
+			    m_out.writeShort(1972);
+			    m_out.writeInt(uptime);
+			    m_out.flush();
+
+			    // Update uptime ramp data
+			    uptime = uptime + 1;
 			}
 			else {
 			    debug("*** Unknown command : " + command);

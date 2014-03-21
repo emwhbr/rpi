@@ -60,15 +60,16 @@ public class Redrob {
     private static final int RECV_TIMEOUT_MS = 1000;
     private static final int SERVER_PORT = 52022;
 
-    private static final int COMMAND_STEER       = 1;
-    private static final int COMMAND_GET_VOLTAGE = 2;
-    private static final int COMMAND_CAMERA      = 3;
+    private static final int COMMAND_STEER         = 1;
+    private static final int COMMAND_GET_VOLTAGE   = 2;
+    private static final int COMMAND_CAMERA        = 3;
+    private static final int COMMAND_GET_SYS_STATS = 4;
 
     private final String m_peer_ip_address;
     private Socket m_sock;
 
     private DataInputStream m_in;
-    private DataOutputStream m_out;
+    private DataOutputStream m_out;   
 
     ////////////////////////////////////////////////////////
 
@@ -199,6 +200,38 @@ public class Redrob {
 	m_out.writeShort(COMMAND_CAMERA);  // Camera command
 	m_out.writeByte(code.get_value()); // Actual camera code
 	m_out.flush();
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public static class SysStats {
+	public int cpu_load; // %
+	public int mem_used; // KBytes
+	public int irq;      // irq/s
+	public int uptime;   // seconds
+
+	public SysStats()
+	{
+	    cpu_load = 0;
+	    mem_used = 0;
+	    irq = 0;
+	    uptime = 0;
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public void get_sys_stats(SysStats s) throws IOException
+    {
+	// Send command to Redrob using TCP
+	m_out.writeShort(COMMAND_GET_SYS_STATS); // Get stats command
+	m_out.flush();
+
+	// Receive stats (sent by Redrob)
+	s.cpu_load = m_in.readUnsignedByte();
+	s.mem_used = m_in.readInt(); 
+	s.irq      = m_in.readUnsignedShort();
+	s.uptime   = m_in.readInt();
     }
 
     ////////////////////////////////////////////////////////

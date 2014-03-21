@@ -1,4 +1,17 @@
 ===========================================================================
+2014-03-22
+
+* Redrob daemon
+  - R1A12
+  - Added support for reporting system statistics.
+
+* Redrob Remote Control
+  - R1A04
+  -  Added support for presenting system statistics in GUI.
+
+===========================================================================
+
+===========================================================================
 2014-03-08
 
 * Added Raspberry Pi Camera module (Rev 1.3).

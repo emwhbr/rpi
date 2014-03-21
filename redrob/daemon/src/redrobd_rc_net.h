@@ -54,6 +54,11 @@ class redrobd_rc_net : public redrobd_remote_ctrl {
 
   uint16_t get_camera_code(void);
 
+  void set_sys_stat(uint8_t cpu_load,
+		    uint32_t mem_used,
+		    uint16_t irq,
+		    uint32_t uptime);
+
   void server_thread_check(void);
 
  private:

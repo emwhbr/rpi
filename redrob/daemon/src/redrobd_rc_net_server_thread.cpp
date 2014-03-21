@@ -10,6 +10,7 @@
 // ************************************************************************
 
 #include <strings.h>
+#include <string.h>
 #include <sstream>
 #include <iomanip>
 
@@ -27,9 +28,10 @@
 #define DOTTED_IP_ADDR_LEN  20
 
 // Client commands
-#define CLI_CMD_STEER        1
-#define CLI_CMD_GET_VOLTAGE  2
-#define CLI_CMD_CAMERA       3
+#define CLI_CMD_STEER          1
+#define CLI_CMD_GET_VOLTAGE    2
+#define CLI_CMD_CAMERA         3
+#define CLI_CMD_GET_SYS_STATS  4
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of types and constants
@@ -55,6 +57,7 @@ redrobd_rc_net_server_thread(string thread_name,
   pthread_mutex_init(&m_steer_code_mutex, NULL);
   pthread_mutex_init(&m_voltage_mutex, NULL);
   pthread_mutex_init(&m_camera_code_mutex, NULL);
+  pthread_mutex_init(&m_sys_stat_mutex, NULL);
   
   init_members();
 }
@@ -66,6 +69,7 @@ redrobd_rc_net_server_thread::~redrobd_rc_net_server_thread(void)
   pthread_mutex_destroy(&m_steer_code_mutex);
   pthread_mutex_destroy(&m_voltage_mutex);
   pthread_mutex_destroy(&m_camera_code_mutex);
+  pthread_mutex_destroy(&m_sys_stat_mutex);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -116,6 +120,19 @@ uint16_t redrobd_rc_net_server_thread::get_camera_code(void)
   pthread_mutex_unlock(&m_camera_code_mutex);
   
   return the_code;
+}
+
+////////////////////////////////////////////////////////////////
+
+void redrobd_rc_net_server_thread::set_sys_stat(const RC_NET_SYS_STAT *sys_stat)
+{
+  // Lockdown set operation
+  pthread_mutex_lock(&m_sys_stat_mutex);
+
+  memcpy(&m_sys_stat, sys_stat, sizeof(m_sys_stat));
+
+  // Lockup set operation
+  pthread_mutex_unlock(&m_sys_stat_mutex);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -319,6 +336,8 @@ void redrobd_rc_net_server_thread::init_members(void)
   m_voltage = 0;
   m_camera_code = CLI_CAMERA_NONE;
 
+  bzero(&m_sys_stat, sizeof(m_sys_stat));
+
   m_server_sd = 0;
   m_client_sd = 0;
 }
@@ -425,7 +444,22 @@ void redrobd_rc_net_server_thread::handle_clients(void)
 	  // Update latest camera code
 	  pthread_mutex_lock(&m_camera_code_mutex);
 	  m_camera_code = camera_code;
-	  pthread_mutex_unlock(&m_camera_code_mutex);	  	  
+	  pthread_mutex_unlock(&m_camera_code_mutex);
+	}
+	else if (client_command == CLI_CMD_GET_SYS_STATS) {
+	  RC_NET_SYS_STAT sys_stat;
+
+	  // Reply with latest system statistics
+	  pthread_mutex_lock(&m_sys_stat_mutex);
+	  memcpy(&sys_stat, &m_sys_stat, sizeof(m_sys_stat));	  
+	  pthread_mutex_unlock(&m_sys_stat_mutex);
+
+	  hton32(&sys_stat.mem_used);
+	  hton16(&sys_stat.irq);
+	  hton32(&sys_stat.uptime);
+
+	  send_client((void *)&sys_stat,
+		      sizeof(sys_stat));
 	}
 	else {
 	  oss_msg << "Unknown client command : 0x"

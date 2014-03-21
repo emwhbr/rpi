@@ -146,6 +146,23 @@ uint16_t redrobd_rc_net::get_camera_code(void)
 
 ////////////////////////////////////////////////////////////////
 
+void redrobd_rc_net::set_sys_stat(uint8_t cpu_load,
+				  uint32_t mem_used,
+				  uint16_t irq,
+				  uint32_t uptime)
+{
+  RC_NET_SYS_STAT sys_stat;
+
+  sys_stat.cpu_load = cpu_load;
+  sys_stat.mem_used = mem_used;
+  sys_stat.irq      = irq;
+  sys_stat.uptime   = uptime;
+
+  m_server_thread_auto->set_sys_stat(&sys_stat);
+}
+
+////////////////////////////////////////////////////////////////
+
 void redrobd_rc_net::server_thread_check(void)
 {
   // Take back ownership from auto_ptr

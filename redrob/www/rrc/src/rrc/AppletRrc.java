@@ -28,7 +28,9 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -45,7 +47,7 @@ import netscape.javascript.JSException;
 public class AppletRrc extends JApplet implements Runnable {
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A03";
+    private static final String PROD_REV  = "R1A04";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
@@ -85,6 +87,11 @@ public class AppletRrc extends JApplet implements Runnable {
     private ImageIcon m_disconnected_icon;
 
     private JCheckBox m_video_checkbox;
+    private JCheckBox m_stats_checkbox;
+
+    private SystemStatDialog m_sys_stats_dialog;
+    private long m_time_last_sys_stats;
+    private static final long SYS_STATS_UPDATE_TIME_MS = 1000; // ms
 
     private VoltageBar m_voltage_bar;
     private JLabel m_voltage_label;
@@ -95,10 +102,10 @@ public class AppletRrc extends JApplet implements Runnable {
     private boolean m_first_voltage_value;
 
     private static final String NO_VOLTAGE_VALUE = "N/A";
-    private static final long VOLTAGE_UPDATE_TIME = 250; // ms
+    private static final long VOLTAGE_UPDATE_TIME_MS = 250; // ms
 
     private static final int MIN_BAR_VOLTAGE = 6000; // mV
-    private static final int MAX_BAR_VOLTAGE = 7500; // mV
+    private static final int MAX_BAR_VOLTAGE = 8500; // mV
 
     private static final int VOLTAGE_WARNING_LEVEL = 6900; // mV
     private static final int VOLTAGE_ALERT_LEVEL = 6500; // mV
@@ -123,6 +130,8 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_jso = JSObject.getWindow(this); // Interface to javascript
                                           // in same HTML page as applet
 	m_is_connected = false;
+
+	m_time_last_sys_stats = System.nanoTime();
 
 	m_voltage_format = new DecimalFormat("00.000");
 	m_time_last_voltage = System.nanoTime();
@@ -246,6 +255,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	    // Keep Redrob happy, send steer code
 	    m_redrob.send_steer_code(Redrob.STEER_CODE.NONE);
 
+	    // Update system statistics
+	    update_system_stats();
+
 	    // Update voltage value
 	    update_voltage();
 	}
@@ -275,7 +287,10 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_left_button.setEnabled(true);
 
 	    // Enable video stream checkbox
-	    m_video_checkbox.setEnabled(true);	    
+	    m_video_checkbox.setEnabled(true);
+
+	    // Enable system stats checkbox
+	    m_stats_checkbox.setEnabled(true);
 
 	    // Enable disconnect button, disable connect button
 	    m_connect_button.setEnabled(false);
@@ -331,6 +346,13 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	    // Disable video stream checkbox
 	    m_video_checkbox.setEnabled(false);
+
+	    // Disable system stats checkbox
+	    if (m_stats_checkbox.isSelected()) {
+		m_stats_checkbox.setSelected(false);
+		m_sys_stats_dialog.setVisible(false);
+	    }
+	    m_stats_checkbox.setEnabled(false);
 
 	    // Enable connect button, disable disconnect button
 	    m_connect_button.setEnabled(true);
@@ -390,6 +412,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	    // Send actual steer code
 	    m_redrob.send_steer_code(code);
 
+	    // Update system statistics
+	    update_system_stats();
+
 	    // Update voltage value
 	    update_voltage();
 	}
@@ -430,7 +455,7 @@ public class AppletRrc extends JApplet implements Runnable {
     {
 	// Check if time to update voltage
 	if ( (System.nanoTime() - m_time_last_voltage) >
-	     (VOLTAGE_UPDATE_TIME * 1000000) ) {
+	     (VOLTAGE_UPDATE_TIME_MS * 1000000) ) {
 	    
 	    // Get actual voltage
 	    int voltage_mv = m_redrob.get_voltage_mv();
@@ -446,6 +471,33 @@ public class AppletRrc extends JApplet implements Runnable {
 	    
 	    // Save last update time
 	    m_time_last_voltage = System.nanoTime();	
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void update_system_stats() throws IOException
+    {
+	// Only update if dialog is visible
+	if (m_sys_stats_dialog.isVisible()) {
+
+	    // Check if time to update stats
+	    if ( (System.nanoTime() - m_time_last_sys_stats) >
+		 (SYS_STATS_UPDATE_TIME_MS * 1000000) ) {
+		
+		// Get actual stats
+		Redrob.SysStats s = new Redrob.SysStats();
+		m_redrob.get_sys_stats(s);
+		
+		// Update
+		m_sys_stats_dialog.set_cpu_load(s.cpu_load);
+		m_sys_stats_dialog.set_mem_used(s.mem_used);
+		m_sys_stats_dialog.set_irq(s.irq);
+		m_sys_stats_dialog.set_uptime(s.uptime);
+		
+		// Save last update time
+		m_time_last_sys_stats = System.nanoTime();	
+	    }
 	}
     }
 
@@ -527,6 +579,7 @@ public class AppletRrc extends JApplet implements Runnable {
     }
 
     ////////////////////////////////////////////////////////
+
     private void video_checkbox_action_performed(ActionEvent e)
     {
 	AbstractButton abstractButton = (AbstractButton) e.getSource();
@@ -562,6 +615,22 @@ public class AppletRrc extends JApplet implements Runnable {
 	}
 
 	m_main_thread_cmd = THREAD_CMD.VIDEO;
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void sys_stats_checkbox_action_performed(ActionEvent e)
+    {
+	AbstractButton abstractButton = (AbstractButton) e.getSource();
+        if (abstractButton.getModel().isSelected()) {
+	    //debug("SYS STATS CHECKBOX - SELECTED");
+	    m_sys_stats_dialog.reset_stats();
+	    m_sys_stats_dialog.setVisible(true);
+	}
+	else {
+	    //debug("SYS STATS CHECKBOX - NOT SELECTED");
+	    m_sys_stats_dialog.setVisible(false);
+	}
     }
 
     ////////////////////////////////////////////////////////
@@ -668,6 +737,31 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_video_checkbox.setSelected(false);
 	m_video_checkbox.setEnabled(false);
 	m_content.add(m_video_checkbox);
+	
+	// Create the system stats checkbox
+	m_stats_checkbox = new JCheckBox("Redstats");
+	m_stats_checkbox.addActionListener(new ActionListener()
+	    {
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    sys_stats_checkbox_action_performed(e);
+		}
+	    });
+	m_stats_checkbox.setBounds(10, 125, 90, 20);
+	m_stats_checkbox.setSelected(false);
+	m_stats_checkbox.setEnabled(false);
+	m_content.add(m_stats_checkbox);
+
+	// Create the system stats dialog
+	Component ac = this;
+	while (!(ac instanceof Frame)) {
+	    ac = ac.getParent(); // Walk upwards until we hit a frame
+	}
+	Frame my_frame = (Frame)ac;
+	m_sys_stats_dialog = new SystemStatDialog(my_frame, m_stats_checkbox);
+	m_sys_stats_dialog.setLocation(150, 50);
+	m_sys_stats_dialog.setVisible(false);	
 
 	// Create the battery voltage labels
 	m_voltage_label = new JLabel("Battery voltage :");
