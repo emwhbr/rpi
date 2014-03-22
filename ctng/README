@@ -2,8 +2,10 @@ Build a cross toolchain that generates code compatible with target
 running Raspbian "wheezy" (2013-02-09-wheezy-raspbian.zip).
 
 Toolchain is built and installed on the host (x86_64) computer using
-crosstool-NG. Has been successfully tested on hosts running openSUSE 11.4
-and openSUSE 12.3.
+crosstool-NG. Has been successfully tested on hosts running:
+- openSUSE 11.4
+- openSUSE 12.3
+- Linux Mint 16 "Petra"
 
 crosstool-NG:	crosstool-ng-1.18.0.tar.bz2
 configuration:	config
@@ -23,3 +25,35 @@ FPU:		vfp
 
 PREFIX:		arm-unknown-linux-gnueabihf-
 INSTALL DIR:	/opt/rpi/toolchains/x-tools/arm-unknown-linux-gnueabihf
+
+Build instructions
+------------------
+1. Prepare build directory
+   - mkdir /proj/rpi/ctng/
+   - cd /proj/rpi/ctng/
+   - tar xvf crosstool-ng-1.18.0.tar.bz2
+   - cd crosstool-ng-1.18.0
+
+2. Install necessary packages (depends on actual Linux distribution)
+   - sudo apt-get install bison flex gperf texinfo libtool ncurses-dev
+
+3. Configure crosstool-NG
+   - ./configure --prefix=/proj/rpi/ctng/install
+
+4. Build crosstool-NG
+   - make
+   - make install
+   - export PATH=$PATH:/proj/rpi/ctng/install/bin
+
+5. Install necessary packages (depends on actual Linux distribution)
+   - sudo apt-get install g++ subversion
+
+6. Build cross toolchain
+   - mkdir /proj/rpi/ctng/staging
+   - cd /proj/rpi/ctng/staging
+   - cp /proj/rpi/emwhbr_github/rpi/ctng/config .config
+   - ct-ng menuconfig
+   - ct-ng build
+
+7. Check installation:
+	/opt/rpi/toolchains/x-tools/arm-unknown-linux-gnueabihf
