@@ -205,10 +205,13 @@ public class Redrob {
     ////////////////////////////////////////////////////////
 
     public static class SysStats {
-	public int cpu_load; // %
-	public int mem_used; // KBytes
-	public int irq;      // irq/s
-	public int uptime;   // seconds
+	public int cpu_load;    // %
+	public int mem_used;    // KBytes
+	public int irq;         // Irq/s
+	public int uptime;      // seconds
+	public int cpu_temp;    // milli-degree Celsius
+	public int cpu_voltage; // milli-volt
+	public int cpu_freq;    // MHz
 
 	public SysStats()
 	{
@@ -216,6 +219,9 @@ public class Redrob {
 	    mem_used = 0;
 	    irq = 0;
 	    uptime = 0;
+	    cpu_temp = 0;
+	    cpu_voltage = 0;
+	    cpu_freq = 0;
 	}
     }
 
@@ -228,10 +234,13 @@ public class Redrob {
 	m_out.flush();
 
 	// Receive stats (sent by Redrob)
-	s.cpu_load = m_in.readUnsignedByte();
-	s.mem_used = m_in.readInt(); 
-	s.irq      = m_in.readUnsignedShort();
-	s.uptime   = m_in.readInt();
+	s.cpu_load    = m_in.readUnsignedByte();
+	s.mem_used    = m_in.readInt(); 
+	s.irq         = m_in.readUnsignedShort();
+	s.uptime      = m_in.readInt();
+	s.cpu_temp    = m_in.readInt();
+	s.cpu_voltage = m_in.readUnsignedShort();
+	s.cpu_freq    = m_in.readUnsignedShort();
     }
 
     ////////////////////////////////////////////////////////

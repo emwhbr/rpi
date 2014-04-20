@@ -1,4 +1,20 @@
 ===========================================================================
+2014-04-20
+
+* Redrob daemon
+  - R1A13
+  - Added Raspberry Pi specific status information when
+    reporting system statistics.
+  - Updated support for executing Linux shell commands.
+
+* Redrob Remote Control
+  - R1A05
+  - Added Raspberry Pi specific status information when
+    presenting system statistics in GUI.
+
+===========================================================================
+
+===========================================================================
 2014-03-22
 
 * Redrob daemon
@@ -7,7 +23,7 @@
 
 * Redrob Remote Control
   - R1A04
-  -  Added support for presenting system statistics in GUI.
+  - Added support for presenting system statistics in GUI.
 
 ===========================================================================
 

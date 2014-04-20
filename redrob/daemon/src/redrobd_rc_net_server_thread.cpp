@@ -457,6 +457,9 @@ void redrobd_rc_net_server_thread::handle_clients(void)
 	  hton32(&sys_stat.mem_used);
 	  hton16(&sys_stat.irq);
 	  hton32(&sys_stat.uptime);
+	  hton32(&sys_stat.cpu_temp);
+	  hton16(&sys_stat.cpu_voltage);
+	  hton16(&sys_stat.cpu_freq);
 
 	  send_client((void *)&sys_stat,
 		      sizeof(sys_stat));

@@ -47,7 +47,7 @@ import netscape.javascript.JSException;
 public class AppletRrc extends JApplet implements Runnable {
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A04";
+    private static final String PROD_REV  = "R1A05";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
@@ -489,11 +489,14 @@ public class AppletRrc extends JApplet implements Runnable {
 		Redrob.SysStats s = new Redrob.SysStats();
 		m_redrob.get_sys_stats(s);
 		
-		// Update
+		// Update GUI
 		m_sys_stats_dialog.set_cpu_load(s.cpu_load);
 		m_sys_stats_dialog.set_mem_used(s.mem_used);
 		m_sys_stats_dialog.set_irq(s.irq);
 		m_sys_stats_dialog.set_uptime(s.uptime);
+		m_sys_stats_dialog.set_cpu_temp(s.cpu_temp);
+		m_sys_stats_dialog.set_cpu_voltage(s.cpu_voltage);
+		m_sys_stats_dialog.set_cpu_freq(s.cpu_freq);
 		
 		// Save last update time
 		m_time_last_sys_stats = System.nanoTime();	

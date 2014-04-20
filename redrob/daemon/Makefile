@@ -66,6 +66,8 @@ DAEMON_OBJS = $(OBJ_DIR)/redrobd_main.o \
               $(OBJ_DIR)/delay.o \
               $(OBJ_DIR)/timer.o \
               $(OBJ_DIR)/sys_stat.o \
+              $(OBJ_DIR)/rpi_stat.o \
+              $(OBJ_DIR)/shell_cmd.o \
               $(OBJ_DIR)/thread.o \
               $(OBJ_DIR)/cyclic_thread.o
 

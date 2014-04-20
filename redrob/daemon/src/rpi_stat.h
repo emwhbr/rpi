@@ -9,69 +9,59 @@
 // *                                                                      *
 // ************************************************************************
 
-#ifndef __REDROBD_RC_NET_H__
-#define __REDROBD_RC_NET_H__
-
-#include <string>
-#include <stdint.h>
-#include <memory>
-
-#include "redrobd_remote_ctrl.h"
-#include "redrobd_rc_net_server_thread.h"
+#ifndef __RPI_STAT_H__
+#define __RPI_STAT_H__
 
 using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
-// Camera codes
-#define REDROBD_RC_CAMERA_NONE          0x00
-#define REDROBD_RC_CAMERA_STOP_STREAM   0x01
-#define REDROBD_RC_CAMERA_START_STREAM  0x02
+// Return codes
+#define RPI_STAT_SUCCESS               0
+#define RPI_STAT_CMD_FAILED           -1
+#define RPI_STAT_UNEXPECTED_RESPONSE  -2
 
 /////////////////////////////////////////////////////////////////////////////
 //               Class support types
 /////////////////////////////////////////////////////////////////////////////
+typedef enum {RPI_STAT_VOLT_ID_CORE,
+	      RPI_STAT_VOLT_ID_SDRAM_C,
+	      RPI_STAT_VOLT_ID_SDRAM_I,
+	      RPI_STAT_VOLT_ID_SDRAM_P} RPI_STAT_VOLT_ID;
+
+typedef enum {RPI_STAT_FREQ_ID_ARM,
+	      RPI_STAT_FREQ_ID_CORE,
+	      RPI_STAT_FREQ_ID_H264,
+	      RPI_STAT_FREQ_ID_ISP,
+	      RPI_STAT_FREQ_ID_V3D,
+	      RPI_STAT_FREQ_ID_UART,
+	      RPI_STAT_FREQ_ID_PWM,
+	      RPI_STAT_FREQ_ID_EMMC,
+	      RPI_STAT_FREQ_ID_PIXEL,
+	      RPI_STAT_FREQ_ID_VEC,
+	      RPI_STAT_FREQ_ID_HDMI,
+	      RPI_STAT_FREQ_ID_DPI} RPI_STAT_FREQ_ID;
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of classes
 /////////////////////////////////////////////////////////////////////////////
 
-class redrobd_rc_net : public redrobd_remote_ctrl {
-  
+class rpi_stat {
+
  public:
-  redrobd_rc_net(string server_ip_address,
-		 uint16_t server_port);
+  rpi_stat(void);
+  ~rpi_stat(void);
+  
+  long get_temperature(float &value);
 
-  ~redrobd_rc_net(void);
+  long get_voltage(RPI_STAT_VOLT_ID id,
+		   float &value);
 
-  // Implements pure virtual functions from base class
-  virtual void initialize(void);
-  virtual void finalize(void);
-  virtual uint16_t get_steering(void);
-
-  void set_voltage(float value);
-
-  uint16_t get_camera_code(void);
-
-  void set_sys_stat(uint8_t cpu_load,     // %
-		    uint32_t mem_used,    // KBytes
-		    uint16_t irq,         // Irq/s
-		    uint32_t uptime,      // seconds
-		    uint32_t cpu_temp,    // milli-degree Celsius
-		    uint16_t cpu_voltage, // milli-volt
-		    uint16_t cpu_freq);   // MHz
-
-  void server_thread_check(void);
+  long get_frequency(RPI_STAT_FREQ_ID id,
+		     unsigned &value);
 
  private:
-  string   m_server_ip_address;
-  uint16_t m_server_port;
-
-  // The server thread object
-  auto_ptr<redrobd_rc_net_server_thread> m_server_thread_auto;
-
-  void init_members(void);
 };
 
-#endif // __REDROBD_RC_NET_H__
+#endif // __RPI_STAT_H__

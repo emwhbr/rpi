@@ -23,6 +23,7 @@
 #include <pwd.h>
 
 #include "daemon_utility.h"
+#include "shell_cmd.h"
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of macros
@@ -266,9 +267,16 @@ long become_daemon(const char *run_as_user,
 
 long shutdown_system(void)
 {
-  const char shutdown_cmd[] = "shutdown -h now";
+  const string cmd = "shutdown -h now";
+  shell_cmd rpi_cmd;
+  int exit_status;
 
-  if ( system(shutdown_cmd) == -1 ) {
+  // Execute shell command
+  if (rpi_cmd.execute(cmd, exit_status) != SHELL_CMD_SUCCESS) {
+    return DAEMON_FAILURE;
+  }
+
+  if (exit_status) {
     return DAEMON_FAILURE;
   }
 

@@ -107,6 +107,9 @@ class RedrobSim {
 			    m_out.writeInt(4096);
 			    m_out.writeShort(1972);
 			    m_out.writeInt(uptime);
+			    m_out.writeInt(72123);
+			    m_out.writeShort(1250);
+			    m_out.writeShort(700);
 			    m_out.flush();
 
 			    // Update uptime ramp data

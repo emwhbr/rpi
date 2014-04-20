@@ -25,15 +25,23 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import java.text.DecimalFormat;
+
 // Implementation notes
 // http://csis.pace.edu/~bergin/sol/java/gui/pt2/
 
 public class SystemStatDialog extends JDialog {
 
-    private JTextField m_cpu_load = new JTextField(6); // %
-    private JTextField m_mem_used = new JTextField(6); // KBytes
-    private JTextField m_irq = new JTextField(6);      // irq/s
-    private JTextField m_uptime = new JTextField(6);   // hh:mm:ss
+    private JTextField m_cpu_load    = new JTextField(6); // %
+    private JTextField m_mem_used    = new JTextField(6); // KBytes
+    private JTextField m_irq         = new JTextField(6); // Irq/s
+    private JTextField m_uptime      = new JTextField(6); // hh:mm:ss
+    private JTextField m_cpu_temp    = new JTextField(6); // Celsius
+    private JTextField m_cpu_voltage = new JTextField(6); // Volt
+    private JTextField m_cpu_freq    = new JTextField(6); // MHz
+
+    private DecimalFormat m_cpu_temp_format;
+    private DecimalFormat m_cpu_voltage_format;
 
     private AbstractButton m_button;    
 
@@ -41,6 +49,7 @@ public class SystemStatDialog extends JDialog {
 
     public void set_cpu_load(int value)
     {
+	// Input is in %
 	update_int_textfield(m_cpu_load, value);
     }
 
@@ -48,6 +57,7 @@ public class SystemStatDialog extends JDialog {
 
     public void set_mem_used(int value)
     {
+	// Input is in KBytes
 	update_int_textfield(m_mem_used, value);
     }
 
@@ -55,6 +65,7 @@ public class SystemStatDialog extends JDialog {
 
     public void set_irq(int value)
     {
+	// Input is in Irq/s
 	update_int_textfield(m_irq, value);
     }
 
@@ -62,8 +73,37 @@ public class SystemStatDialog extends JDialog {
 
     public void set_uptime(int value)
     {	
+	// Input is in seconds
 	m_uptime.setText(null);
 	m_uptime.setText(to_hhmmss(value));
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public void set_cpu_temp(int value)
+    {	
+	// Input is in milli-degree Celsius
+	update_float_textfield(m_cpu_temp,
+			       (float)value / (float)1000.0,
+			       m_cpu_temp_format);
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public void set_cpu_voltage(int value)
+    {	
+	// Input is in milli-volt
+	update_float_textfield(m_cpu_voltage,
+			       (float)value / (float)1000.0,
+			       m_cpu_voltage_format);
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public void set_cpu_freq(int value)
+    {
+	// Input is in MHz
+	update_int_textfield(m_cpu_freq, value);
     }
 
     ////////////////////////////////////////////////////////
@@ -74,6 +114,9 @@ public class SystemStatDialog extends JDialog {
 	set_mem_used(0);
 	set_irq(0);
 	set_uptime(0);
+	set_cpu_temp(0);
+	set_cpu_voltage(0);
+	set_cpu_freq(0);
     }
 
     ////////////////////////////////////////////////////////
@@ -83,7 +126,7 @@ public class SystemStatDialog extends JDialog {
     {
 	super(frame, "System Stats", false);
 	Container contentPane = getContentPane();
-	setSize(300, 150);
+	setSize(300, 200);
 	setResizable(false);
 
 	m_button = button;
@@ -91,7 +134,7 @@ public class SystemStatDialog extends JDialog {
 	// Layout the fields and labels	
 	JPanel dialogPanel = new JPanel();
 	contentPane.add(dialogPanel, BorderLayout.CENTER);
-	dialogPanel.setLayout(new GridLayout(4, 2, 0, 3));
+	dialogPanel.setLayout(new GridLayout(7, 2, 0, 3));
 
 	dialogPanel.add(new JLabel(" CPU load [%]"));
 	dialogPanel.add(m_cpu_load);
@@ -108,6 +151,22 @@ public class SystemStatDialog extends JDialog {
 	dialogPanel.add(new JLabel(" Uptime [hh:mm:ss]"));
 	dialogPanel.add(m_uptime);
 	m_uptime.setEditable(false);
+
+	dialogPanel.add(new JLabel(" CPU temp [C]"));
+	dialogPanel.add(m_cpu_temp);
+	m_cpu_temp.setEditable(false);
+
+	m_cpu_temp_format = new DecimalFormat("000.00");
+
+	dialogPanel.add(new JLabel(" CPU voltage [V]"));
+	dialogPanel.add(m_cpu_voltage);
+	m_cpu_voltage.setEditable(false);
+
+	m_cpu_voltage_format = new DecimalFormat("0.00");
+
+	dialogPanel.add(new JLabel(" CPU freq [MHz]"));
+	dialogPanel.add(m_cpu_freq);
+	m_cpu_freq.setEditable(false);
 
 	// Reset all fields
 	reset_stats();
@@ -140,6 +199,21 @@ public class SystemStatDialog extends JDialog {
 	txt.setText(null);
 	if (value > 0) {
 	    txt.setText(Integer.toString(value));
+	}
+	else {
+	    txt.setText("N/A");
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void update_float_textfield(JTextField txt,
+					float value,
+					DecimalFormat value_format)
+    {
+	txt.setText(null);
+	if (value > 0.0) {
+	    txt.setText(value_format.format(value));
 	}
 	else {
 	    txt.setText("N/A");

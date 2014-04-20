@@ -9,12 +9,12 @@
 // *                                                                      *
 // ************************************************************************
 
-#include <stdlib.h>
 #include <sstream>
 #include <iomanip>
 
 #include "redrobd_camera_ctrl.h"
 #include "redrobd_log.h"
+#include "shell_cmd.h"
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of macros
@@ -160,47 +160,49 @@ bool redrobd_camera_ctrl::check_camera_code(uint16_t code)
 void redrobd_camera_ctrl::stop_stream(void)
 {
   const string stop_stream_cmd = string(RPI_STREAM_SCRIPT) + string(" shutdown");
+  shell_cmd rpi_cmd;
+  int exit_status;
 
   // Execute stream script (shutdown stream)
-  int rc = system(stop_stream_cmd.c_str());
-  if (rc == -1) {
-    redrobd_log_writeln("Camera control: Stop stream [FORK FAILED]");
+  if (rpi_cmd.execute(stop_stream_cmd,
+		      exit_status) != SHELL_CMD_SUCCESS) {
+    redrobd_log_writeln("Camera control: Stop stream [UNKNOWN]");
+  }
+  
+  // Check script exit status
+  if (  exit_status == RPI_STREAM_SCRIPT_EXIT_OK ) {
+      redrobd_log_writeln("Camera control: Stop stream [OK]");
+  }
+  else if ( exit_status == RPI_STREAM_SCRIPT_EXIT_FAIL ) {
+    redrobd_log_writeln("Camera control: Stop stream [FAIL]");
   }
   else {
-    // Check script exit status
-    if (  WEXITSTATUS(rc) == RPI_STREAM_SCRIPT_EXIT_OK ) {
-      redrobd_log_writeln("Camera control: Stop stream [OK]");
-    }
-    else if ( WEXITSTATUS(rc) == RPI_STREAM_SCRIPT_EXIT_FAIL ) {
-      redrobd_log_writeln("Camera control: Stop stream [FAIL]");
-    }
-    else {
-      redrobd_log_writeln("Camera control: Stop stream [UNKNOWN]");
-    }
+    redrobd_log_writeln("Camera control: Stop stream [UNEXPECTED]");
   }
 }
 
 ////////////////////////////////////////////////////////////////
 
 void redrobd_camera_ctrl::start_stream(void)
-{
+{  
   const string start_stream_cmd = string(RPI_STREAM_SCRIPT) + string(" start");
+  shell_cmd rpi_cmd;
+  int exit_status;
 
   // Execute stream script (start stream)
-  int rc = system(start_stream_cmd.c_str());
-  if (rc == -1) {
-    redrobd_log_writeln("Camera control: Start stream [FORK FAILED]");
+  if (rpi_cmd.execute(start_stream_cmd,
+		      exit_status) != SHELL_CMD_SUCCESS) {
+    redrobd_log_writeln("Camera control: Start stream [UNKNOWN]");
+  }
+  
+  // Check script exit status
+  if (  exit_status == RPI_STREAM_SCRIPT_EXIT_OK ) {
+      redrobd_log_writeln("Camera control: Start stream [OK]");
+  }
+  else if ( exit_status == RPI_STREAM_SCRIPT_EXIT_FAIL ) {
+    redrobd_log_writeln("Camera control: Start stream [FAIL]");
   }
   else {
-    // Check script exit status
-    if (  WEXITSTATUS(rc) == RPI_STREAM_SCRIPT_EXIT_OK ) {
-      redrobd_log_writeln("Camera control: Start stream [OK]");
-    }
-    else if ( WEXITSTATUS(rc) == RPI_STREAM_SCRIPT_EXIT_FAIL ) {
-      redrobd_log_writeln("Camera control: Start stream [FAIL]");
-    }
-    else {
-      redrobd_log_writeln("Camera control: Start stream [UNKNOWN]");
-    }
+    redrobd_log_writeln("Camera control: Start stream [UNEXPECTED]");
   }
 }

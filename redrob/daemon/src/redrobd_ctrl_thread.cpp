@@ -582,65 +582,91 @@ bool redrobd_ctrl_thread::battery_voltage_ok(void)
 
 void redrobd_ctrl_thread::check_system_stats(void)
 {
-  if ( m_sys_stat_check_timer.get_elapsed_time() > 
+  if ( m_sys_stat_check_timer.get_elapsed_time() <
 	 (1.0/SYS_STAT_CHECK_FREQUENCY) ) {
+    return;
+  }
 
-    long rc;
+  long rc;
 
-    // Get system stats
-    float cpu_load;
-    unsigned mem_used;
-    unsigned irq;
-    unsigned uptime;
-
-    rc = m_sys_stat.get_interval_cpu_load(cpu_load);
-    if (rc != SYS_STAT_SUCCESS) {      
-      cpu_load = 0;
-    }
-
-    rc = m_sys_stat.get_mem_used_kb(mem_used);
-    if (rc != SYS_STAT_SUCCESS) {
-      mem_used = 0;
-    }
-
-    rc = m_sys_stat.get_interval_irq(irq);
-    if (rc != SYS_STAT_SUCCESS) {
-      irq = 0;
-    }
-
-    rc = m_sys_stat.get_uptime_sec(uptime);
-    if (rc != SYS_STAT_SUCCESS) {
-      uptime = 0;
-    }
-
-    // Reset system stats interval
-    rc = m_sys_stat.reset_interval_cpu_load();
-    if (rc != SYS_STAT_SUCCESS) {
-      if (rc != SYS_STAT_SUCCESS) {
-	THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_SYS_STAT_OPERATION_FAILED,
-		"Error resetting system stats interval(cpu_load) for thread %s",
-		get_name().c_str());  
-      }
-    }
-
-    rc = m_sys_stat.reset_interval_irq();
+  // Get system stats (Linux)
+  float cpu_load;
+  unsigned mem_used;
+  unsigned irq;
+  unsigned uptime;
+  
+  rc = m_sys_stat.get_interval_cpu_load(cpu_load);
+  if (rc != SYS_STAT_SUCCESS) {      
+    cpu_load = 0;
+  }
+  
+  rc = m_sys_stat.get_mem_used_kb(mem_used);
+  if (rc != SYS_STAT_SUCCESS) {
+    mem_used = 0;
+  }
+  
+  rc = m_sys_stat.get_interval_irq(irq);
+  if (rc != SYS_STAT_SUCCESS) {
+    irq = 0;
+  }
+  
+  rc = m_sys_stat.get_uptime_sec(uptime);
+  if (rc != SYS_STAT_SUCCESS) {
+    uptime = 0;
+  }
+  
+  // Get system stats (Raspberry Pi)
+  float cpu_temp;
+  float cpu_voltage;
+  unsigned cpu_freq;
+  
+  rc = m_rpi_stat.get_temperature(cpu_temp);
+  if (rc != RPI_STAT_SUCCESS) {      
+    cpu_temp = 0.0;
+  }
+  
+  rc = m_rpi_stat.get_voltage(RPI_STAT_VOLT_ID_CORE,
+			      cpu_voltage);
+  if (rc != RPI_STAT_SUCCESS) {      
+    cpu_voltage = 0.0;
+  }
+  
+  rc = m_rpi_stat.get_frequency(RPI_STAT_FREQ_ID_ARM,
+				cpu_freq);
+  if (rc != RPI_STAT_SUCCESS) {      
+    cpu_freq = 0;
+  }
+  
+  // Reset system stats interval
+  rc = m_sys_stat.reset_interval_cpu_load();
+  if (rc != SYS_STAT_SUCCESS) {
     if (rc != SYS_STAT_SUCCESS) {
       THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_SYS_STAT_OPERATION_FAILED,
-		"Error resetting system stats interval(irq) for thread %s",
+		"Error resetting system stats interval(cpu_load) for thread %s",
 		get_name().c_str());  
     }
-
-    // Update system stats for remote control (NET, Sockets)
-    m_rc_net_auto->set_sys_stat((uint8_t)cpu_load,
-				(uint32_t)mem_used,
-				(uint16_t)irq,
-				(uint32_t)uptime);        
-    // Reset timer
-    if (m_sys_stat_check_timer.reset() != TIMER_SUCCESS) {
-      THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
-		"Error resetting system stats check timer for thread %s",
-		get_name().c_str());   
-    }
+  }
+  
+  rc = m_sys_stat.reset_interval_irq();
+  if (rc != SYS_STAT_SUCCESS) {
+    THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_SYS_STAT_OPERATION_FAILED,
+	      "Error resetting system stats interval(irq) for thread %s",
+	      get_name().c_str());  
+  }
+  
+  // Update system stats for remote control (NET, Sockets)
+  m_rc_net_auto->set_sys_stat((uint8_t)cpu_load,
+			      (uint32_t)mem_used,
+			      (uint16_t)irq,
+			      (uint32_t)uptime,
+			      (uint32_t)(cpu_temp * 1000.0),
+			      (uint16_t)(cpu_voltage * 1000.0),
+			      (uint16_t)((float)(cpu_freq) / 1000000.0));        
+  // Reset timer
+  if (m_sys_stat_check_timer.reset() != TIMER_SUCCESS) {
+    THROW_EXP(REDROBD_INTERNAL_ERROR, REDROBD_TIME_ERROR,
+	      "Error resetting system stats check timer for thread %s",
+	      get_name().c_str());   
   }
 }
 

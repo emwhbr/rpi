@@ -40,10 +40,13 @@ using namespace std;
 //               Class support types
 /////////////////////////////////////////////////////////////////////////////
 typedef struct {
-  uint8_t  cpu_load;
-  uint32_t mem_used;
-  uint16_t irq;
-  uint32_t uptime;
+  uint8_t  cpu_load;    // %
+  uint32_t mem_used;    // KBytes
+  uint16_t irq;         // Irq/s
+  uint32_t uptime;      // seconds
+  uint32_t cpu_temp;    // milli-degree Celsius
+  uint16_t cpu_voltage; // milli-volt
+  uint16_t cpu_freq;    // MHz
 } __attribute__((packed)) RC_NET_SYS_STAT;
 
 /////////////////////////////////////////////////////////////////////////////

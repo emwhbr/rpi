@@ -9,6 +9,8 @@
 // *                                                                      *
 // ************************************************************************
 
+#include <strings.h>
+
 #include "redrobd_rc_net.h"
 #include "redrobd_log.h"
 #include "redrobd_thread_utility.h"
@@ -149,14 +151,22 @@ uint16_t redrobd_rc_net::get_camera_code(void)
 void redrobd_rc_net::set_sys_stat(uint8_t cpu_load,
 				  uint32_t mem_used,
 				  uint16_t irq,
-				  uint32_t uptime)
+				  uint32_t uptime,
+				  uint32_t cpu_temp,
+				  uint16_t cpu_voltage,
+				  uint16_t cpu_freq)
 {
   RC_NET_SYS_STAT sys_stat;
 
-  sys_stat.cpu_load = cpu_load;
-  sys_stat.mem_used = mem_used;
-  sys_stat.irq      = irq;
-  sys_stat.uptime   = uptime;
+  bzero(&sys_stat, sizeof(sys_stat));
+
+  sys_stat.cpu_load    = cpu_load;
+  sys_stat.mem_used    = mem_used;
+  sys_stat.irq         = irq;
+  sys_stat.uptime      = uptime;
+  sys_stat.cpu_temp    = cpu_temp;
+  sys_stat.cpu_voltage = cpu_voltage;
+  sys_stat.cpu_freq    = cpu_freq;
 
   m_server_thread_auto->set_sys_stat(&sys_stat);
 }

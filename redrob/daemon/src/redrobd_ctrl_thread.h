@@ -26,6 +26,7 @@
 #include "redrobd_hw_cfg.h"
 #include "timer.h"
 #include "sys_stat.h"
+#include "rpi_stat.h"
 
 using namespace std;
 
@@ -84,6 +85,7 @@ class redrobd_ctrl_thread : public cyclic_thread {
 
   // Controls system statistics check
   sys_stat m_sys_stat;
+  rpi_stat m_rpi_stat;
   timer    m_sys_stat_check_timer;
 
   // Controls shutdown
