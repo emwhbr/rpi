@@ -1,0 +1,29 @@
+VCGENCMD is a utility command that can extract 
+various status information from Raspberry Pi.
+
+Path: /usr/bin/vcgencmd
+
+For further information, see:
+http://elinux.org/RPI_vcgencmd_usage
+
+Example of usage:
+-----------------
+root@raspberrypi:/tmp# vcgencmd version
+Jan  6 2014 21:16:43 
+Copyright (c) 2012 Broadcom
+version b00bb3ae73bd2799df0e938b7a5f17f45303fb53 (clean) (release)
+
+root@raspberrypi:/tmp# vcgencmd measure_temp
+temp=43.3'C
+
+root@raspberrypi:/tmp# vcgencmd measure_clock arm
+frequency(45)=700000000
+
+root@raspberrypi:/tmp# vcgencmd measure_clock core
+frequency(1)=250000000
+
+root@raspberrypi:/tmp# vcgencmd measure_volts sdram_p
+volt=1.23V
+
+root@raspberrypi:/tmp# vcgencmd measure_volts sdram_c
+volt=1.20V
