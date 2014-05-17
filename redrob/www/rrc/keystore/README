@@ -1,0 +1,50 @@
+1. Creating a public/private key pair for signing
+--------------------------------------------------
+
+/opt/java/jdk1.7.0_51/bin/keytool -genkeypair \
+                                  -keystore rrc_keystore \
+                                  -alias rrc_alias \
+                                  -validity 3650
+
+Enter keystore password: rrcpasswd
+Re-enter new password: rrcpasswd
+What is your first and last name?
+  [Unknown]:  Håkan Brolin
+What is the name of your organizational unit?
+  [Unknown]:  None
+What is the name of your organization?
+  [Unknown]:  Bonden i Nol 
+What is the name of your City or Locality?
+  [Unknown]:  Nol
+What is the name of your State or Province?
+  [Unknown]:  Ale
+What is the two-letter country code for this unit?
+  [Unknown]:  SE
+Is CN=Håkan Brolin, OU=None, O=Bonden i Nol, L=Nol, ST=Ale, C=SE correct?
+  [no]:  yes
+
+Enter key password for <rrc_alias>
+	(RETURN if same as keystore password):  
+
+2. Sign Applet with a digital certificate
+-----------------------------------------
+
+/opt/java/jdk1.7.0_51/bin/jarsigner -keystore rrc_keystore \
+                                    -storepass rrcpasswd \
+                                    rrc.jar rrc_alias 
+jar signed.
+
+Warning: 
+No -tsa or -tsacert is provided and this jar is not timestamped. Without a timestamp, users may not be able to validate this jar after the signer certificate's expiration date (2024-05-04) or after any future revocation date.
+
+3. Verify
+---------
+
+/opt/java/jdk1.7.0_51/bin/jarsigner -verify rrc.jar 
+jar verified.
+
+Warning: 
+This jar contains entries whose certificate chain is not validated.
+This jar contains signatures that does not include a timestamp. Without a timestamp, users may not be able to validate this jar after the signer certificate's expiration date (2024-05-04) or after any future revocation date.
+
+Re-run with the -verbose and -certs options for more details.

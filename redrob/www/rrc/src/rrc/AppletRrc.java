@@ -13,6 +13,7 @@ package rrc;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.ButtonModel;
 import javax.swing.ImageIcon;
 import javax.swing.JApplet;
@@ -24,6 +25,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -38,27 +40,38 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.DecimalFormat;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
 import netscape.javascript.JSObject;
 import netscape.javascript.JSException;
 
-public class AppletRrc extends JApplet implements Runnable {
+import joystick.JoystickEvent;
+import joystick.JoystickReader;
+
+public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A05";
+    private static final String PROD_REV  = "R1A06";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
     private static final String STEER_BUTT_RIGHT   = "HÖGER";
     private static final String STEER_BUTT_LEFT    = "VÄNSTER";
 
-    Map<String, Boolean> m_steer_map;
+    private Map<String, Boolean> m_steer_map;    
 
     private Redrob m_redrob;
 
     private JSObject m_jso;
+
+    private JMenu m_joystick_submenu_open;
+    private JMenuItem m_joystick_menu_item_close;    
+    private JoystickReader.JOYSTICK_ID m_joy_id;
+    private JoystickReader m_joy_reader;
+    private boolean m_joy_supported;
+    private JoystickReader.JoystickInfo m_joy_info;
 
     private enum THREAD_CMD {NONE,
 			     CONNECT,
@@ -69,7 +82,8 @@ public class AppletRrc extends JApplet implements Runnable {
     private Thread m_main_thread;
     private boolean m_main_thread_running;
     private THREAD_CMD m_main_thread_cmd;
-    private static final int MAIN_THREAD_PERIOD_TIME_MS = 80; // 12.5 Hz
+    private static final int MAIN_THREAD_PERIOD_TIME_MS =  80; // 12.5 Hz
+    private static final int JOYSTICK_POLL_INTERVALL_MS = 100; // ms
 
     private JPanel m_content;    
 
@@ -77,6 +91,8 @@ public class AppletRrc extends JApplet implements Runnable {
     private JButton m_reverse_button;
     private JButton m_right_button;
     private JButton m_left_button;
+
+    private SteerIndicatorX m_steer_indicator;
 
     private JButton m_connect_button;
     private JButton m_disconnect_button;
@@ -86,6 +102,7 @@ public class AppletRrc extends JApplet implements Runnable {
     private ImageIcon m_connected_icon;
     private ImageIcon m_disconnected_icon;
 
+    private JCheckBox m_joystick_checkbox;
     private JCheckBox m_video_checkbox;
     private JCheckBox m_stats_checkbox;
 
@@ -129,6 +146,12 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	m_jso = JSObject.getWindow(this); // Interface to javascript
                                           // in same HTML page as applet
+
+	// Joystick layer not yet created
+	m_joy_id        = null;
+	m_joy_reader    = null;
+	m_joy_supported = false; // Assume the worst
+
 	m_is_connected = false;
 
 	m_time_last_sys_stats = System.nanoTime();
@@ -138,6 +161,15 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	m_main_thread_running = true;
 	m_main_thread_cmd = THREAD_CMD.NONE;
+
+	// Platform specific initializations
+	// Check OS and architecture
+	String os_name = System.getProperty("os.name");
+	String os_arch = System.getProperty("os.arch");
+	if ( os_name.equals("Linux") &&
+	     (os_arch.equals("amd64") || os_arch.equals("x86_64")) ) {
+	    m_joy_supported = true;
+	}
 
 	// Initialize the GUI 
 	try { 
@@ -150,8 +182,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	    err_msg_box(exp.getMessage() + "\n" + sw);
 	}
 
-	// Create the thread
+	// Create the main thread
 	m_main_thread = new Thread(this);
+	m_main_thread.setName("Main");
 	m_main_thread.start();
     }
 
@@ -171,6 +204,21 @@ public class AppletRrc extends JApplet implements Runnable {
     {
         //debug("stop...");
 
+	// Cleanup joystick layer
+	if (m_joy_reader != null) {
+	    try {		
+		//debug("stop: Cleanup joystick layer");
+		m_joy_reader.cleanup();
+	    }
+	    catch(JoystickReader.Exp exp) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		exp.printStackTrace(pw);
+		err_msg_box(exp.getMessage() + "\n" + sw);
+	    }
+	}
+
+	// Disconnect from target
 	if (m_is_connected) {
 
 	    m_main_thread_running = false;
@@ -197,6 +245,27 @@ public class AppletRrc extends JApplet implements Runnable {
 
 	// Finalize thread
 	m_main_thread_running = false;
+	try {
+	    if (m_main_thread.isAlive()) {
+		//debug("destroy : Waiting for thread " +  m_main_thread.getName() + " to die");
+		try {		   
+		    m_main_thread.join(1000);
+		    if (m_main_thread.isAlive()) {
+			throw new Exp("Timout waiting for thread " + m_main_thread.getName()); 
+		    }
+		}
+		catch (InterruptedException exp) {
+		    throw new Exp("Error waiting for thread " + m_main_thread.getName());
+		}
+	    }
+	}
+	catch(Exp exp) {
+	    StringWriter sw = new StringWriter();
+	    PrintWriter pw = new PrintWriter(sw);
+	    exp.printStackTrace(pw);
+	    err_msg_box(exp.getMessage() + "\n" + sw);
+	}
+
 	m_main_thread = null;
     }
 
@@ -205,12 +274,15 @@ public class AppletRrc extends JApplet implements Runnable {
     @Override
     public void run()
     {
-	//debug("run...thread started");
+	//debug(m_main_thread.getName() + " : started");	
 
 	int cnt = 0;
 
-	while (m_main_thread_running) {	    
-	    //debug("main thread=" + cnt++ + ", cmd=" + m_main_thread_cmd);
+	while (m_main_thread_running) {
+	    /*
+	    debug(m_main_thread.getName() + 
+		  " : " + cnt++ + ", cmd=" + m_main_thread_cmd);
+	    */
 
 	    // Execute command
 	    switch (m_main_thread_cmd) {
@@ -218,10 +290,10 @@ public class AppletRrc extends JApplet implements Runnable {
 		do_command_none();
 		break;
 	    case CONNECT:
-		do_command_connect();		
+		do_command_connect();
 		break;
 	    case DISCONNECT:
-		do_command_disconnect();		
+		do_command_disconnect();
 		break;
 	    case STEER:
 		do_command_steer();
@@ -239,8 +311,27 @@ public class AppletRrc extends JApplet implements Runnable {
 	    }
 	}
 
-	//debug("run...thread stopped");
+	//debug(m_main_thread.getName() + " : exit");
     }
+
+    ////////////////////////////////////////////////////////
+
+    @Override
+    public void joystick_axis_event_callback()
+    {
+	// This is the callback for joystick AXIS events	
+	//debug("CALLBACK - joystick_axis_event_callback()");
+
+	m_main_thread_cmd = THREAD_CMD.STEER;
+    }
+
+    ////////////////////////////////////////////////////////
+
+    public class Exp extends Exception {
+	public Exp(String msg) {
+	    super(msg);
+	}
+    }    
 
     ////////////////////////////////////////////////////////
 
@@ -285,6 +376,11 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_reverse_button.setEnabled(true);
 	    m_right_button.setEnabled(true);
 	    m_left_button.setEnabled(true);
+
+	    // Enable joystick checkbox
+	    if (m_joy_reader != null) {
+		m_joystick_checkbox.setEnabled(true);
+	    }
 
 	    // Enable video stream checkbox
 	    m_video_checkbox.setEnabled(true);
@@ -344,6 +440,12 @@ public class AppletRrc extends JApplet implements Runnable {
 	    m_right_button.setEnabled(false);
 	    m_left_button.setEnabled(false);
 
+	    // Disable joystick checkbox
+	    if (m_joy_reader != null) {
+		m_joystick_checkbox.setSelected(false);
+		m_joystick_checkbox.setEnabled(false);
+	    }
+
 	    // Disable video stream checkbox
 	    m_video_checkbox.setEnabled(false);
 
@@ -376,38 +478,25 @@ public class AppletRrc extends JApplet implements Runnable {
 
     private void do_command_steer()
     {
-	String steer_button = "";
-
-	// Find which steer button that is active
-	for (String key : m_steer_map.keySet()) {
-	    if (m_steer_map.get(key)) {
-		//debug("do_command_steer=" + key);
-		steer_button = key;
-		break;
-	    }
+	// Check if connected
+	if (!m_is_connected) {
+	    m_main_thread_cmd = THREAD_CMD.NONE; // Clear command
+	    return;
 	}
-	
-	// Get actual steer code
+
 	Redrob.STEER_CODE code;
-        switch (steer_button) {
-            case STEER_BUTT_FORWARD:
-                code = Redrob.STEER_CODE.FORWARD;
-                break;
-            case STEER_BUTT_REVERSE:
-                code = Redrob.STEER_CODE.REVERSE;
-                break;
-            case STEER_BUTT_RIGHT:
-                code = Redrob.STEER_CODE.RIGHT;
-                break;
-            case STEER_BUTT_LEFT:
-                code = Redrob.STEER_CODE.LEFT;
-                break;
-            default:
-                // This should not happen when when this function
-                // is called. There should be a button pressed.
-                code = Redrob.STEER_CODE.NONE;
-                break;
-        }
+
+	// Joystick layer has higher priority
+	if (m_joystick_checkbox.isSelected()) {
+	    code = get_joystick_steer_code();
+	}
+	else {
+	    code = get_button_steer_code();
+	}
+
+	// Update steer indicator
+	m_steer_indicator.process(code);
+
 	try {
 	    // Send actual steer code
 	    m_redrob.send_steer_code(code);
@@ -447,6 +536,94 @@ public class AppletRrc extends JApplet implements Runnable {
 	    exp.printStackTrace(pw);
 	    err_msg_box(exp.getMessage() + "\n" + sw);
 	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private Redrob.STEER_CODE get_button_steer_code()
+    {
+	String steer_button = "";
+
+	// Find which steer button that is active
+	for (String key : m_steer_map.keySet()) {
+	    if (m_steer_map.get(key)) {
+		//debug("get_button_steer_code=" + key);
+		steer_button = key;
+		break;
+	    }
+	}
+	
+	// Get actual steer code
+	Redrob.STEER_CODE code;
+        switch (steer_button) {
+            case STEER_BUTT_FORWARD:		
+                code = Redrob.STEER_CODE.FORWARD;
+                break;
+            case STEER_BUTT_REVERSE:
+                code = Redrob.STEER_CODE.REVERSE;
+                break;
+            case STEER_BUTT_RIGHT:
+                code = Redrob.STEER_CODE.RIGHT;
+                break;
+            case STEER_BUTT_LEFT:
+                code = Redrob.STEER_CODE.LEFT;
+                break;
+            default:
+                // This should not happen when when this function
+                // is called. There should be a button pressed.
+                code = Redrob.STEER_CODE.NONE;
+                break;
+        }
+
+	return code;
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private Redrob.STEER_CODE get_joystick_steer_code()
+    {
+	if (m_joy_reader == null) {
+	    return Redrob.STEER_CODE.NONE;
+	}
+
+	// Check that joystick layer is producing as expected
+	if (!m_joy_reader.is_alive()) {
+	    info_msg_box("Joystick not responding");
+	    close_joystick();
+	    return Redrob.STEER_CODE.NONE;
+	}	
+
+	JoystickReader.JoystickPosition pos;
+
+	// Get position from joystick layer
+	pos = m_joy_reader.get_current_position();
+	/*
+	debug("get_joystick_steer_code: pos=> r=" + pos.r + 
+	      ", theta=" + pos.theta);
+	*/
+
+	// Convert joystick position to actual steer code
+	Redrob.STEER_CODE code;
+	if (pos.r == 0.0) {
+	    code = Redrob.STEER_CODE.NONE;
+	}
+	else if ( (pos.theta >= -45.0) && (pos.theta <= 45.0) ) {
+	    code = Redrob.STEER_CODE.RIGHT;
+	}
+	else if ( (pos.theta > 45.0) && (pos.theta < 135.0) ) {
+	    code = Redrob.STEER_CODE.FORWARD;
+	}
+	else if ( (pos.theta >= 135.0) ) {
+	    code = Redrob.STEER_CODE.LEFT;
+	}
+	else if ( (pos.theta <= -135.0) ) {
+	    code = Redrob.STEER_CODE.LEFT;
+	}
+	else {
+	    code = Redrob.STEER_CODE.REVERSE;
+	}
+	
+	return code;
     }
 
     ////////////////////////////////////////////////////////
@@ -539,8 +716,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	}
 	else {
 	    //debug(button_id + " - NOT PRESSED");
-	    m_steer_map.put(button_id, false); // Steer button not active
+	    m_steer_map.put(button_id, false);   // Steer button not active
 	    m_main_thread_cmd = THREAD_CMD.NONE; // Clear command
+	    m_steer_indicator.reset();           // Reset indicators
 	}
     }
 
@@ -567,6 +745,135 @@ public class AppletRrc extends JApplet implements Runnable {
 
     ////////////////////////////////////////////////////////
 
+    private void help_menu_item_about_action_performed(ActionEvent e)
+    {
+	info_msg_box("Name: "+ PROD_NAME + "\n" +
+		     "Rev: " + PROD_REV + "\n" +
+		     "Creator: Bonden i Nol\n" +
+		     "E-mail: hakanbrolin@hotmail.com");
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void joystick_menu_item_info_action_performed(ActionEvent e)
+    {
+	if (!m_joy_supported) {
+	    String os_name = System.getProperty("os.name");
+	    String os_arch = System.getProperty("os.arch");	    
+	    info_msg_box("Joystick only supported for 64-bit Linux\n" +
+			 "Current OS : " + os_name + "-" + os_arch);
+	    return;
+	}
+
+	if (m_joy_reader == null) {
+	    info_msg_box("No joystick open");
+	}
+	else {
+	    String msg =
+		String.format("Name: %s\n" +
+			      "Axis: %s\n" +
+			      "Buttons: %s\n" +
+			      "Lib: %s",
+			      m_joy_info.name,
+			      m_joy_info.axis,
+			      m_joy_info.buttons,
+			      m_joy_info.lib_info);
+	    info_msg_box(msg);
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+    
+    private class RbJoyDevListener implements ActionListener {
+
+	private JoystickEvent m_joystick_event;
+
+	public RbJoyDevListener(JoystickEvent joystick_event)
+	{
+	    m_joystick_event = joystick_event;
+	}
+
+	@Override
+        public void actionPerformed(ActionEvent e) {
+
+	    switch (e.getActionCommand()) {
+	    case "JOY_0":
+		m_joy_id = JoystickReader.JOYSTICK_ID.JOYSTICK_0;
+		break;
+	    case "JOY_1":
+		m_joy_id = JoystickReader.JOYSTICK_ID.JOYSTICK_1;
+		break;
+	    }
+
+	    //debug("Creating joystick layer");
+	    m_joy_reader = new JoystickReader(m_joystick_event,
+					      m_joy_id,
+					      "/linux-lib64",
+					      JOYSTICK_POLL_INTERVALL_MS);
+	    try {
+		//debug("Setup joystick layer");
+		m_joy_reader.setup();
+		
+		// Save this for later
+		m_joy_info = m_joy_reader.get_info();
+		
+		//debug("Start joystick layer");
+		m_joy_reader.start();
+		
+		// Activate joystick layer
+		m_joy_reader.set_active(true);
+
+		if (m_is_connected) {
+		    m_joystick_checkbox.setEnabled(true);
+		}
+		m_joystick_menu_item_close.setEnabled(true);
+		m_joystick_submenu_open.setEnabled(false);
+	    }
+	    catch(JoystickReader.Exp exp) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		exp.printStackTrace(pw);
+		err_msg_box(exp.getMessage() + "\n" + sw);
+				
+		// Try to cleanup
+		close_joystick();
+		m_joy_reader = null;
+	    }	    	    	    
+        }
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void close_joystick()
+    {
+	// Cleanup joystick layer
+	try {		
+	    //debug("Cleanup joystick layer");
+	    m_joy_reader.cleanup();
+	    m_joy_reader = null;
+
+	    m_joystick_checkbox.setSelected(false);
+	    m_joystick_checkbox.setEnabled(false);
+	    m_joystick_menu_item_close.setEnabled(false);
+	    m_joystick_submenu_open.setEnabled(true);
+	}
+	catch(JoystickReader.Exp exp) {
+	    StringWriter sw = new StringWriter();
+	    PrintWriter pw = new PrintWriter(sw);
+	    exp.printStackTrace(pw);
+	    err_msg_box(exp.getMessage() + "\n" + sw);
+	}	
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void joystick_menu_item_close_action_performed(ActionEvent e)
+    {
+	close_joystick();
+    }
+
+    ////////////////////////////////////////////////////////
+
     private void connect_button_action_performed(ActionEvent e)
     {
 	String action = e.getActionCommand();
@@ -578,6 +885,23 @@ public class AppletRrc extends JApplet implements Runnable {
 	if (action.equals(m_disconnect_button.getText())) {
 	    //debug("DISCONNECT BUTTON - ACTIVATED");
 	    m_main_thread_cmd = THREAD_CMD.DISCONNECT;
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void joystick_checkbox_action_performed(ActionEvent e)
+    {
+	AbstractButton abstractButton = (AbstractButton) e.getSource();
+        if (abstractButton.getModel().isSelected()) {
+	    //debug("JOYSTICK CHECKBOX - SELECTED");	    
+	    // Activate joystick layer
+	    m_joy_reader.set_active(true);
+	}
+	else {
+	    //debug("JOYSTICK CHECKBOX - NOT SELECTED");
+	    // Deactivate joystick layer
+	    m_joy_reader.set_active(false);
 	}
     }
 
@@ -634,56 +958,137 @@ public class AppletRrc extends JApplet implements Runnable {
 	    //debug("SYS STATS CHECKBOX - NOT SELECTED");
 	    m_sys_stats_dialog.setVisible(false);
 	}
+    }    
+
+    ////////////////////////////////////////////////////////
+
+    private void set_enable_all_buttons(ButtonGroup group,
+					boolean b)
+    {
+	Enumeration<AbstractButton> buttons = group.getElements();
+	while (buttons.hasMoreElements()) {
+	    AbstractButton button = buttons.nextElement();
+	    button.setEnabled(b);
+	}
     }
 
     ////////////////////////////////////////////////////////
 
     private void init_gui() throws Exception
     {
+	//////////////
 	// Top level
+	//////////////
 	m_content = new JPanel();
 	m_content.setLayout(null); // Use no layout
-	m_content.setBorder(BorderFactory.createLineBorder(Color.black));	
+	m_content.setBorder(BorderFactory.createLineBorder(Color.black));
+	this.setContentPane(m_content);
 
+	////////////////////////
 	// Create the menu bar
+	////////////////////////
         JMenuBar menu_bar = new JMenuBar();
         menu_bar.setOpaque(true);
         menu_bar.setBackground(new Color(154, 165, 127));
         menu_bar.setPreferredSize(new Dimension(500, 20));
+	this.setJMenuBar(menu_bar);
 
-	// Create the help menu.
+	/////////////////////////
+	// Create the help menu
+	/////////////////////////
 	JMenu help_menu = new JMenu("Help");
 	menu_bar.add(help_menu);
-	JMenuItem help_menu_item_about = new JMenuItem("About");
-	help_menu.add(help_menu_item_about);
-
-	// Adding action listener to menu items
+	JMenuItem help_menu_item_about = new JMenuItem("About");	
 	help_menu_item_about.addActionListener(new ActionListener()
 	    {
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-		    info_msg_box("Name: "+ PROD_NAME + "\n" +
-				 "Rev: " + PROD_REV + "\n" +
-				 "Creator: Bonden i Nol\n" +
-				 "e-mail: hakanbrolin@hotmail.com");
+		    help_menu_item_about_action_performed(e);		    
 		}
 	    });
-	
-	this.setJMenuBar(menu_bar);
-	this.setContentPane(m_content);
+	help_menu.add(help_menu_item_about);
 
+	/////////////////////////////
+	// Create the joystick menu
+	/////////////////////////////
+	JMenu joystick_menu = new JMenu("Joystick");	
+	menu_bar.add(joystick_menu);
+	JMenuItem joystick_menu_item_info = new JMenuItem("Info");	
+	joystick_menu_item_info.addActionListener(new ActionListener()
+	    {
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    joystick_menu_item_info_action_performed(e);
+		}
+	    });
+	joystick_menu.add(joystick_menu_item_info);
+
+	/////////////////////////////////
+	// Create the joystick sub-menu
+	/////////////////////////////////
+	m_joystick_submenu_open = new JMenu("Open");
+	joystick_menu.add(m_joystick_submenu_open);	
+	if (m_joy_supported) {
+	    ButtonGroup rb_grp_joy_dev = new ButtonGroup();
+	    JRadioButtonMenuItem rb_joy_dev_0 = new JRadioButtonMenuItem("JOYSTICK 0");
+	    JRadioButtonMenuItem rb_joy_dev_1 = new JRadioButtonMenuItem("JOYSTICK 1");
+	    rb_joy_dev_0.setSelected(true);
+	    rb_joy_dev_1.setSelected(false);
+	    rb_grp_joy_dev.add(rb_joy_dev_0);
+	    rb_grp_joy_dev.add(rb_joy_dev_1);
+	    set_enable_all_buttons(rb_grp_joy_dev, true);
+	    rb_joy_dev_0.setActionCommand("JOY_0");
+	    rb_joy_dev_1.setActionCommand("JOY_1");
+	    RbJoyDevListener rb_dev_listener = new RbJoyDevListener(this);
+	    rb_joy_dev_0.addActionListener(rb_dev_listener);
+	    rb_joy_dev_1.addActionListener(rb_dev_listener);
+
+	    m_joystick_submenu_open.add(rb_joy_dev_0);	       	
+	    m_joystick_submenu_open.add(rb_joy_dev_1);
+	    m_joystick_submenu_open.setEnabled(true);
+	}
+	else {
+	    m_joystick_submenu_open.setEnabled(false);
+	}			
+
+	///////////////////////////////
+	// Continue the joystick menu
+	///////////////////////////////
+	m_joystick_menu_item_close = new JMenuItem("Close");
+	joystick_menu.add(m_joystick_menu_item_close); 
+	m_joystick_menu_item_close.addActionListener(new ActionListener()
+	    {
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    joystick_menu_item_close_action_performed(e);
+		}
+	    });
+	m_joystick_menu_item_close.setEnabled(false);	      	
+
+	/////////////////////////
 	// Create steer buttons
+	/////////////////////////
 	m_forward_button = new JButton();
 	m_reverse_button = new JButton();
-	m_right_button = new JButton();
-	m_left_button = new JButton();
+	m_right_button   = new JButton();
+	m_left_button    = new JButton();
 	create_steer_button(m_forward_button, STEER_BUTT_FORWARD, 180,  10);
 	create_steer_button(m_reverse_button, STEER_BUTT_REVERSE, 180, 100);
 	create_steer_button(m_right_button,   STEER_BUTT_RIGHT,   260,  55);
 	create_steer_button(m_left_button,    STEER_BUTT_LEFT,    100,  55);
 
+	// Create steer indicator object (based on steer buttons)
+	m_steer_indicator = new SteerIndicatorX(m_forward_button,
+						m_reverse_button,
+						m_right_button,
+						m_left_button);
+
+	///////////////////////////
 	// Create connect button
+	///////////////////////////
 	m_connect_button = new JButton("CONNECT");
 	m_connect_button.addActionListener(new ActionListener()
 	    {
@@ -697,7 +1102,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_connect_button.setEnabled(true);
 	m_content.add(m_connect_button);
 
+	/////////////////////////////
 	// Create disconnect button
+	/////////////////////////////
 	m_disconnect_button = new JButton("DISCONNECT");
 	m_disconnect_button.addActionListener(new ActionListener()
 	    {
@@ -711,7 +1118,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_disconnect_button.setEnabled(false);
 	m_content.add(m_disconnect_button);
 
+	/////////////////////////////////////////////////
 	// Create the connected state label (and icons)
+	/////////////////////////////////////////////////
 	class EmptyClass{}
 	Class load_class = new EmptyClass().getClass();
 
@@ -726,7 +1135,26 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_connected_state_label.setBounds(10, 10, 30, 30);	
 	m_content.add(m_connected_state_label);
 
+	/////////////////////////////////
+	// Create the joystick checkbox
+	/////////////////////////////////
+	m_joystick_checkbox = new JCheckBox("Joystick");
+	m_joystick_checkbox.addActionListener(new ActionListener()
+	    {
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+		    joystick_checkbox_action_performed(e);
+		}
+	    });
+	m_joystick_checkbox.setBounds(10, 60, 85, 20);
+	m_joystick_checkbox.setSelected(false);
+	m_joystick_checkbox.setEnabled(false);
+	m_content.add(m_joystick_checkbox);
+
+	/////////////////////////////////////
 	// Create the video stream checkbox
+	/////////////////////////////////////
 	m_video_checkbox = new JCheckBox("Redcam");
 	m_video_checkbox.addActionListener(new ActionListener()
 	    {
@@ -741,7 +1169,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_video_checkbox.setEnabled(false);
 	m_content.add(m_video_checkbox);
 	
+	/////////////////////////////////////
 	// Create the system stats checkbox
+	/////////////////////////////////////
 	m_stats_checkbox = new JCheckBox("Redstats");
 	m_stats_checkbox.addActionListener(new ActionListener()
 	    {
@@ -756,7 +1186,9 @@ public class AppletRrc extends JApplet implements Runnable {
 	m_stats_checkbox.setEnabled(false);
 	m_content.add(m_stats_checkbox);
 
+	///////////////////////////////////
 	// Create the system stats dialog
+	///////////////////////////////////
 	Component ac = this;
 	while (!(ac instanceof Frame)) {
 	    ac = ac.getParent(); // Walk upwards until we hit a frame
@@ -782,7 +1214,7 @@ public class AppletRrc extends JApplet implements Runnable {
 				       130, 155, 210, 20);
 
 	m_voltage_bar.set_levels(VOLTAGE_WARNING_LEVEL,
-				 VOLTAGE_ALERT_LEVEL);
+				 VOLTAGE_ALERT_LEVEL);	
     }
 
 }
