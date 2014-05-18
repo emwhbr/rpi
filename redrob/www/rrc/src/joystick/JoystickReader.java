@@ -29,11 +29,23 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
 	}
     }
 
-    public class JoystickPosition {
+    public class JoystickPosition implements Cloneable {
 	public float r     = (float)0.0; // polar
 	public float theta = (float)0.0; // polar (degrees)
+
 	public JoystickPosition() {
 	}
+
+	@Override
+	public JoystickPosition clone()
+	{
+	    try {
+		return (JoystickPosition) super.clone();
+	    }
+	    catch (CloneNotSupportedException e) {
+		return null;
+	    }
+	}	
     }
 
     public class Exp extends Exception {
@@ -216,18 +228,35 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
 
     public JoystickPosition get_current_position()
     {
+	JoystickPosition current_pos = new JoystickPosition();
+
 	// Return "zero" if thread not active or dead
 	if (!is_alive()) {
-	    return new JoystickPosition();
+	    return current_pos;
 	}
 
 	// Lockdown the read operation
 	try {
 	    m_joy_pos_lock.readLock().lock();
-	    return m_joy_pos;
+	    current_pos = m_joy_pos.clone();
+	    return current_pos;
 	}
 	finally {
 	    m_joy_pos_lock.readLock().unlock();
+	}
+    }
+
+    ////////////////////////////////////////////////////////
+
+    private void set_current_position(JoystickPosition pos)
+    {
+	// Update current position (lockdown the write operation)
+	try {
+	    m_joy_pos_lock.writeLock().lock();
+	    m_joy_pos = pos.clone();
+	}
+	finally {
+	    m_joy_pos_lock.writeLock().unlock();
 	}
     }
 
@@ -280,8 +309,11 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
 
 	short x_value = 0;
 	short y_value = 0;
+	short z_value = 0;
 	libjoy.JOY_EVENT event = new libjoy.JOY_EVENT();
 	libjoy.JOY_POS_UNIT_CIRCLE pos = new libjoy.JOY_POS_UNIT_CIRCLE();
+	JoystickPosition joy_pos = new JoystickPosition();
+	JoystickPosition latest_xy_joy_pos = new JoystickPosition();
 
 	int event_cnt = 0;
 
@@ -309,6 +341,12 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
 		    throw new Exp("joy_get_event : " + get_last_libjoy_error());
 		}
 
+		// Ignore inital events
+		if ( (event.type & libjoy.JOY_EVENT_INIT) != 0 ) {
+		    //debug(m_thread.getName() + " INIT : event=" + event_cnt++);
+		    continue;
+		}
+
 		// Take it easy if no event available
 		if ( event.type == libjoy.JOY_EVENT_NONE ) {
 		    try {
@@ -318,8 +356,8 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
 		    }
 
 		    // Notify this event using callback
+		    // Keep last position
 		    m_joystick_event.joystick_axis_event_callback();
-
 		    continue;
 		}				
 
@@ -341,8 +379,13 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
                      (event.number == libjoy.JOY_Y_AXIS) ) {
                     y_value = event.value;
                 }
-
-		// Only handle horizontal and vertical events
+		// Handle "twist" value
+                if ( ( (event.type & libjoy.JOY_EVENT_AXIS) != 0) &&
+                     (event.number == libjoy.JOY_Z_AXIS) ) {
+                    z_value = event.value;
+                }
+		
+		// Handle horizontal and vertical events
                 if ( ( (event.type & libjoy.JOY_EVENT_AXIS) != 0) &&
                      ( (event.number == libjoy.JOY_X_AXIS) ||
                        (event.number == libjoy.JOY_Y_AXIS) ) ) {
@@ -350,19 +393,32 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
                     // Convert to unit circle
                     m_joy.joy_get_pos_unit_circle(x_value, y_value, pos);
 
-		    // Update current position (lockdown the write operation)
-		    try {
-			m_joy_pos_lock.writeLock().lock();
-			m_joy_pos.r     = pos.r;
-			m_joy_pos.theta = pos.theta * (float)180.0 / (float)PI;
-		    }
-		    finally {
-			m_joy_pos_lock.writeLock().unlock();
-		    }
+		    // Update current position
+		    joy_pos.r     = pos.r;
+		    joy_pos.theta = pos.theta * (float)180.0 / (float)PI;
+		    latest_xy_joy_pos = joy_pos.clone();
+		    set_current_position(joy_pos);
 
 		    // Notify this event using callback
 		    m_joystick_event.joystick_axis_event_callback();
-                }		
+                }
+		// Handle "twist" events
+		else if ( ( (event.type & libjoy.JOY_EVENT_AXIS) != 0) &&
+			  (event.number == libjoy.JOY_Z_AXIS) ) {
+		
+		    // Update current position
+		    if ( Math.abs((float)z_value) > 16000 ) { // Minimum 50% needed
+			joy_pos.r     = 1;
+			joy_pos.theta = (z_value > 0 ? 0 : 180);
+		    }
+		    else {
+			joy_pos = latest_xy_joy_pos.clone();
+		    }
+		    set_current_position(joy_pos);
+			
+		    // Notify this event using callback
+		    m_joystick_event.joystick_axis_event_callback();
+                }
 	    }	    	    
 	}
 	catch(Exception exp) {

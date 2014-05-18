@@ -53,7 +53,7 @@ import joystick.JoystickReader;
 public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A06";
+    private static final String PROD_REV  = "R1A07";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
