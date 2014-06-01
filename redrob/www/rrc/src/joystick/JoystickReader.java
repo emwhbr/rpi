@@ -408,7 +408,7 @@ public class JoystickReader extends JoystickEventNotifier implements Runnable {
 		
 		    // Update current position
 		    if ( Math.abs((float)z_value) > 16000 ) { // Minimum 50% needed
-			joy_pos.r     = 1;
+			joy_pos.r     = z_value / (float)32767.0;
 			joy_pos.theta = (z_value > 0 ? 0 : 180);
 		    }
 		    else {

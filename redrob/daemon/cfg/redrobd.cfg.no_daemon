@@ -43,7 +43,7 @@ supervision_freq=1.0
 
 # Frequency (Hz) of the control thread
 # Note! Value valid during start and restart
-ctrl_thread_freq=10.0
+ctrl_thread_freq=66.7
 
 # Controls if full verbose logging shall be used
 # Note! Value valid during start and restart

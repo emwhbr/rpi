@@ -50,10 +50,10 @@ import netscape.javascript.JSException;
 import joystick.JoystickEvent;
 import joystick.JoystickReader;
 
-public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
+public class AppletRrc extends JApplet implements Runnable, JoystickEvent {    
 
     private static final String PROD_NAME = "Redrob Remote Control";
-    private static final String PROD_REV  = "R1A07";
+    private static final String PROD_REV  = "R1A08";
 
     private static final String STEER_BUTT_FORWARD = "FRAMÅT";
     private static final String STEER_BUTT_REVERSE = "BAKÅT";
@@ -72,6 +72,7 @@ public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
     private JoystickReader m_joy_reader;
     private boolean m_joy_supported;
     private JoystickReader.JoystickInfo m_joy_info;
+    private SteerPwm m_joy_pwm;
 
     private enum THREAD_CMD {NONE,
 			     CONNECT,
@@ -82,8 +83,9 @@ public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
     private Thread m_main_thread;
     private boolean m_main_thread_running;
     private THREAD_CMD m_main_thread_cmd;
-    private static final int MAIN_THREAD_PERIOD_TIME_MS =  80; // 12.5 Hz
-    private static final int JOYSTICK_POLL_INTERVALL_MS = 100; // ms
+
+    private static final int MAIN_THREAD_PERIOD_TIME_MS = 15; // 66.7 Hz
+    private static final int JOYSTICK_POLL_INTERVALL_MS = 15; // 66.7 Hz
 
     private JPanel m_content;    
 
@@ -133,7 +135,7 @@ public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
     @Override
     public void init()
     {
-	//debug("init...");
+	//debug("init...");	
 
 	// Initialize variables
         m_steer_map = new HashMap<>();
@@ -150,7 +152,7 @@ public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
 	// Joystick layer not yet created
 	m_joy_id        = null;
 	m_joy_reader    = null;
-	m_joy_supported = false; // Assume the worst
+	m_joy_supported = false; // Assume the worst	
 
 	m_is_connected = false;
 
@@ -169,6 +171,7 @@ public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
 	if ( os_name.equals("Linux") &&
 	     (os_arch.equals("amd64") || os_arch.equals("x86_64")) ) {
 	    m_joy_supported = true;
+	    m_joy_pwm = new SteerPwm((byte)4);
 	}
 
 	// Initialize the GUI 
@@ -593,37 +596,15 @@ public class AppletRrc extends JApplet implements Runnable, JoystickEvent {
 	    return Redrob.STEER_CODE.NONE;
 	}	
 
-	JoystickReader.JoystickPosition pos;
-
 	// Get position from joystick layer
-	pos = m_joy_reader.get_current_position();
+	JoystickReader.JoystickPosition pos = m_joy_reader.get_current_position();
 	/*
 	debug("get_joystick_steer_code: pos=> r=" + pos.r + 
 	      ", theta=" + pos.theta);
 	*/
 
 	// Convert joystick position to actual steer code
-	Redrob.STEER_CODE code;
-	if (pos.r == 0.0) {
-	    code = Redrob.STEER_CODE.NONE;
-	}
-	else if ( (pos.theta >= -45.0) && (pos.theta <= 45.0) ) {
-	    code = Redrob.STEER_CODE.RIGHT;
-	}
-	else if ( (pos.theta > 45.0) && (pos.theta < 135.0) ) {
-	    code = Redrob.STEER_CODE.FORWARD;
-	}
-	else if ( (pos.theta >= 135.0) ) {
-	    code = Redrob.STEER_CODE.LEFT;
-	}
-	else if ( (pos.theta <= -135.0) ) {
-	    code = Redrob.STEER_CODE.LEFT;
-	}
-	else {
-	    code = Redrob.STEER_CODE.REVERSE;
-	}
-	
-	return code;
+	return m_joy_pwm.get_steer_code(pos);
     }
 
     ////////////////////////////////////////////////////////

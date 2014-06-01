@@ -1,4 +1,20 @@
 ===========================================================================
+2014-06-01
+
+* Redrob Remote Control
+  - R1A08
+  - Modified reading of joystick to support proportional movement.
+    Each axis is divided in four different intervals.
+  - Steer codes are sent using PWM, F=66.7 Hz, with four intervals.
+  - Changed frequency of main thread and joystick reader to 66.7 Hz.
+
+* Redrob daemon
+  - R1A14
+  - Default frequency for controller thread is now 66.7 Hz.
+
+===========================================================================
+
+===========================================================================
 2014-05-18
 
 * Redrob Remote Control

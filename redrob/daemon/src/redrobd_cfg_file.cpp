@@ -35,7 +35,7 @@
 #define DEF_LOG_FILE            "/var/log/"REDROBD_NAME".log"
 #define DEF_LOG_STDOUT          false
 #define DEF_SUPERVISION_FREQ    1.0  // Hz
-#define DEF_CTRL_THREAD_FREQ    10.0 // Hz
+#define DEF_CTRL_THREAD_FREQ    66.7 // Hz
 #define DEF_VERBOSE             false
 
 /////////////////////////////////////////////////////////////////////////////
