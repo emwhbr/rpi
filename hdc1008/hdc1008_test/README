@@ -1,0 +1,93 @@
+C++ class 'hdc1008_io' encapsulates functionality for using the
+digital temperature/humidity sensor HDC1008 (Texas Instruments).
+
+Note! This class is not thread safe and there are no features
+      that protects the I2C bus from multiple callers.
+      The class only includes the basic functions for
+      operating the HDC1008.
+
+Files:
+------
+build.sh		Build script for this project
+Makefile	      	Makefile for this project
+
+build_clean.sh		Wrapper script for clean build
+build_dbg.sh		Wrapper script for debug build
+build_rel.sh		Wrapper script for release build
+
+obj/			Directory for the result of the build
+
+src/
+  hdc1008_io.h		Implements the
+  hdc1008_io.cpp	C++ class 'hdc1008_io'
+
+  test_hdc1008.cpp	Test application
+
+README			This file
+
+Example output from test application (test_hdc1008.cpp):
+--------------------------------------------------------
+
+-------------------------------------
+-------- HDC1008 TEST MENU ----------
+-------------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+  6. read relative humidity
+100. Exit
+
+Enter choice : 1
+-------------------------------------
+-------- HDC1008 TEST MENU ----------
+-------------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+  6. read relative humidity
+100. Exit
+
+Enter choice : 3
+Configuration register: 0x0000
+ res1 : 0x00
+ hres : 0x0
+ tres : 0
+ btst : 0
+ mode : 0
+ heat : 0
+ res2 : 0
+ rst  : 0
+-------------------------------------
+-------- HDC1008 TEST MENU ----------
+-------------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+  6. read relative humidity
+100. Exit
+
+Enter choice : 5
+Temperature[degC] : 20.515442
+-------------------------------------
+-------- HDC1008 TEST MENU ----------
+-------------------------------------
+
+  1. initialize
+  2. finalize
+  3. read configuration
+  4. write configuration
+  5. read temperature
+  6. read relative humidity
+100. Exit
+
+Enter choice : 6
+Relative humidity[%] : 43.493652
