@@ -1,0 +1,51 @@
+C++ class 'ds18b20_io' encapsulates functionality for using the
+1-Wire digital temperature sensor DS18B20 (Maxim).
+
+Note! This class is not thread safe and there are no features
+      that protects the 1-Wire bus from multiple callers.
+      The class only includes the basic functions for
+      operating the DS18B20.
+
+Files:
+------
+build.sh		Build script for this project
+Makefile	      	Makefile for this project
+
+build_clean.sh		Wrapper script for clean build
+build_dbg.sh		Wrapper script for debug build
+build_rel.sh		Wrapper script for release build
+
+obj/			Directory for the result of the build
+
+src/
+  ds18b20_io.h		Implements the
+  ds18b20_io.cpp	C++ class 'ds18b20_io'
+
+  test_ds18b20cpp	Test application
+
+README			This file
+
+Example output from test application (test_ds18b20.cpp):
+--------------------------------------------------------
+
+-------------------------------------
+-------- DS18B20 TEST MENU ----------
+-------------------------------------
+
+  1. initialize
+  2. finalize
+  3. read temperature
+100. Exit
+
+Enter choice : 1
+-------------------------------------
+-------- DS18B20 TEST MENU ----------
+-------------------------------------
+
+  1. initialize
+  2. finalize
+  3. read temperature
+100. Exit
+
+Enter choice : 3
+Temperature[degC] : 17.500000

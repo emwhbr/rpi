@@ -1,0 +1,59 @@
+DS18B20 (Maxim) is a digital temperature sensor with 1-Wire interface.
+The 1-Wire bus system was designed by Dallas Semiconductor Corp.
+This bus is similar in concept as I2C, but with lower data rates and
+with longer ranges.
+
+---------------------------
+-- Raspberry Pi Hardware --
+---------------------------
+Connect to connector P1 according to figure below.
+
+P1-06 (GND)   ------------------------  GND
+P1-01 (3.3V)  ------------------------  VDD
+                    |
+                   ---
+                   | | 4.7k (pull-up)
+                   ---
+                    |
+P1-07 (GPIO4) ------------------------  DQ (Data)
+
+---------------------------
+-- Raspberry Pi Software --
+---------------------------
+Add 1-Wire support:
+
+1) Add the following line to /boot/config.txt
+   dtoverlay=w1-gpio
+
+2) Add the following lines to /etc/modules
+   w1-gpio
+   w1-therm
+
+The device tree overlay is using GPIO4 as default.
+This pin can be changed according to:
+dtoverlay=w1-gpio,gpiopin=<value>
+
+For further information, see /boot/overlays/README.
+
+----------------------------------
+-- Read temperature from sensor --
+----------------------------------
+The sensor is accessed from the file system:
+/sys/bus/w1/devices/28-xxxxxxxxxx/w1_slave
+
+Each sensor (28-) will have an unique serial number (xxxxx).
+Plug one in at a time, look what file is created and label sensor.
+Get temperature from a sensor by reading the corresponding file.
+
+cat /sys/bus/w1/devices/28-0215535bfbff/w1_slave
+38 01 80 80 1f ff 80 80 19 : crc=19 YES
+38 01 80 80 1f ff 80 80 19 t=19500
+
+Response from read operation consists of two lines of text.
+* The first line will have YES or NO at the end.
+  YES means checksum is ok and that the temperature value is valid.
+* The second line ends with the temperature in 1/1000 deg C.
+
+According to datasheet (Maxim), conversion time using 12-bit
+resolution is 750ms. Timing read operation in a shell gave 830ms.
+This is relative slow, but seems to be hardcoded in kernel module (w1_therm.c).
