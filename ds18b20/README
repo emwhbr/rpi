@@ -8,6 +8,7 @@ with longer ranges.
 ---------------------------
 Connect to connector P1 according to figure below.
 
+(1)
 P1-06 (GND)   ------------------------  GND
 P1-01 (3.3V)  ------------------------  VDD
                     |
@@ -17,9 +18,30 @@ P1-01 (3.3V)  ------------------------  VDD
                     |
 P1-07 (GPIO4) ------------------------  DQ (Data)
 
+This setup is "non-parasite" mode.
+
+(2)
+P1-06 (GND)   ------------------------  GND  ---
+                                               |
+P1-01 (3.3V)  -------                   VDD  ---
+                    |
+                   ---
+                   | | 4.7k (pull-up)
+                   ---
+                    |
+P1-07 (GPIO4) ------------------------  DQ (Data)
+
+This setup is "parasite" mode.
+
+Parasite mode derives power directly from the data
+line (“parasite power”), eliminating the need for an
+external power supply.
+
 ---------------------------
 -- Raspberry Pi Software --
 ---------------------------
+Tested on kernel: 4.1.13-v7#826 Fri Nov 13 20:19:03 2015 arm7l
+
 Add 1-Wire support:
 
 1) Add the following line to /boot/config.txt
@@ -32,6 +54,9 @@ Add 1-Wire support:
 The device tree overlay is using GPIO4 as default.
 This pin can be changed according to:
 dtoverlay=w1-gpio,gpiopin=<value>
+
+To enable "parasitic" mode, use the pullup argument:
+dtoverlay=w1-gpio,gpiopin=<value>,pullup=1
 
 For further information, see /boot/overlays/README.
 

@@ -20,7 +20,10 @@ using namespace std;
 /////////////////////////////////////////////////////////////////////////////
 //               Definition of macros
 /////////////////////////////////////////////////////////////////////////////
-#define SENSOR_SERIAL_NUMBER     "28-0215535bfbff"
+
+// Sensor serial numbers, derived from contents of dir /sys/bus/w1/devices/
+#define SENSOR_1_SERIAL_NUMBER     "28-0516949b08ff"
+#define SENSOR_2_SERIAL_NUMBER     "28-0215535bfbff"
 
 #define TEST_DS18B20_ERROR_MSG "*** ERROR : test_ds18b20, rc:%ld\n"
 
@@ -62,7 +65,8 @@ public:
 static the_terminate_handler g_terminate_handler;
 
 // This is the class that is tested in this application
-static ds18b20_io *g_ds18b20_io = NULL;
+static ds18b20_io *g_ds18b20_io_1 = NULL;
+static ds18b20_io *g_ds18b20_io_2 = NULL;
 
 ////////////////////////////////////////////////////////////////
 
@@ -77,14 +81,39 @@ static void ds18b20_test_terminate(void)
 
 ////////////////////////////////////////////////////////////////
 
+static ds18b20_io *get_sensor_from_user(void)
+{
+  unsigned id;
+
+  do {
+    printf("Enter sensor id[1..2]: ");
+    scanf("%u", &id);
+  } while ( (id != 1) && (id != 2) );
+
+  if (id ==1) {
+    return g_ds18b20_io_1;
+  }
+  else if (id == 2) {
+    return g_ds18b20_io_2;
+  }
+  else {
+    return NULL;
+  }
+}
+
+////////////////////////////////////////////////////////////////
+
 static void initialize(void)
 {
-  long rc;
+  long rc;  
+  ds18b20_io *sensor = get_sensor_from_user();
 
-  rc = g_ds18b20_io->initialize();
-  if (rc != DS18B20_IO_SUCCESS) {
-    printf(TEST_DS18B20_ERROR_MSG, rc);
-    return;
+  if (sensor) {
+    rc = sensor->initialize();
+    if (rc != DS18B20_IO_SUCCESS) {
+      printf(TEST_DS18B20_ERROR_MSG, rc);
+      return;
+    }
   }
 }
 
@@ -93,11 +122,14 @@ static void initialize(void)
 static void finalize(void)
 {
   long rc;
+  ds18b20_io *sensor = get_sensor_from_user();
 
-  rc = g_ds18b20_io->finalize();
-  if (rc != DS18B20_IO_SUCCESS) {
-    printf(TEST_DS18B20_ERROR_MSG, rc);
-    return;
+  if (sensor) {
+    rc = sensor->finalize();
+    if (rc != DS18B20_IO_SUCCESS) {
+      printf(TEST_DS18B20_ERROR_MSG, rc);
+      return;
+    }
   }
 }
 
@@ -107,14 +139,16 @@ static void read_temperature(void)
 {
   long rc;
   float temp_val;
+  ds18b20_io *sensor = get_sensor_from_user();
 
-  rc = g_ds18b20_io->read_temperature(temp_val);
-  if (rc != DS18B20_IO_SUCCESS) {
-    printf(TEST_DS18B20_ERROR_MSG, rc);
-    return;
-  }
-
-  printf("Temperature[degC] : %f\n", temp_val);
+  if (sensor) {
+    rc = sensor->read_temperature(temp_val);
+    if (rc != DS18B20_IO_SUCCESS) {
+      printf(TEST_DS18B20_ERROR_MSG, rc);
+      return;
+    }
+    printf("Temperature[degC] : %f\n", temp_val);
+  }  
 }
 
 ////////////////////////////////////////////////////////////////
@@ -124,6 +158,8 @@ static void print_menu(void)
   printf("-------------------------------------\n");
   printf("-------- DS18B20 TEST MENU ----------\n");
   printf("-------------------------------------\n");
+  printf("Sensor 1 : %s\n", SENSOR_1_SERIAL_NUMBER);
+  printf("Sensor 2 : %s\n", SENSOR_2_SERIAL_NUMBER);
   printf("\n");
   printf("  1. initialize\n");
   printf("  2. finalize\n");
@@ -168,12 +204,15 @@ static void do_test_ds18b20(void)
 int main(int argc, char *argv[])
 {
   try {
-    g_ds18b20_io = new ds18b20_io(SENSOR_SERIAL_NUMBER);
+    g_ds18b20_io_1 = new ds18b20_io(SENSOR_1_SERIAL_NUMBER);
+    g_ds18b20_io_2 = new ds18b20_io(SENSOR_2_SERIAL_NUMBER);
     do_test_ds18b20();
-    delete g_ds18b20_io;
+    delete g_ds18b20_io_1;
+    delete g_ds18b20_io_2;
   }
   catch (...) {
-    delete g_ds18b20_io;
+    delete g_ds18b20_io_1;
+    delete g_ds18b20_io_2;
     throw; // Invoke termination handler
   }
   
