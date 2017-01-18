@@ -1,3 +1,7 @@
+===========================
+         RPi1
+===========================
+
 Kernel:
 -------
 Raspbian "wheezy" (2013-02-09-wheezy-raspbian.zip)
@@ -8,3 +12,44 @@ Linux raspberrypi 3.6.11+ #371 PREEMPT Thu Feb 7 16:31:35 GMT 2013 armv6l GNU/Li
 Kernel configuration:
 ---------------------
 config-raspbian-wheezy-2013_02_09
+
+===========================
+         RPi2
+===========================
+
+Kernel:
+-------
+uname -a
+Linux raspberrypi 4.1.13-v7+ #826 SMP PREEMPT Fri Nov 13 20:19:03 GMT 2015 armv7l GNU/Linux
+
+# Get firmware git hash on target
+FIRMWARE_HASH=$(zgrep "* firmware as of" /usr/share/doc/raspberrypi-bootloader/changelog.Debian.gz | head -1 | awk '{ print $5 }')
+echo $FIRMWARE_HASH 
+2a329e0c7d8ea19c085bac5633aa4fccee0f21be
+
+# Get git hash for this kernel on host
+KERNEL_HASH=$(wget https://raw.github.com/raspberrypi/firmware/$FIRMWARE_HASH/extra/git_hash -O -)
+echo $KERNEL_HASH 
+bc1669c846b629cface0aaa367afb2b9c6226faf
+
+# Download kernel sources ...
+curl -L https://github.com/raspberrypi/linux/archive/${KERNEL_HASH}.tar.gz >rpi-linux.tar.gz
+
+# ... or use git to check out.
+# This requires a cloned git repository from 
+git checkout $KERNEL_HASH
+
+Downloading release Nov 13, 2015 from https://github.com/raspberrypi/linux/releases
+gives us a gzipped tarball: linux-rpi-bootloader-1.20151118-1.tar.gz
+
+The unpacked contents of this matches the contents of the resulting download described above.
+diff -Nur linux-rpi-bootloader-1.20151118-1 linux-bc1669c846b629cface0aaa367afb2b9c6226faf
+tells us that there are no differences.
+
+Kernel configuration:
+---------------------
+# Make /proc/config.gz visible on target
+modprobe configs
+
+# Resulting config file
+config-raspbian-2015_11_13
