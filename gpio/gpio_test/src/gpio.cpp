@@ -24,13 +24,18 @@
 // 
 // 3. Wiring Pi GPIO library
 //    http://wiringpi.com
+//
+// 4. Check /proc/iomem
+//
 
 /////////////////////////////////////////////////////////////////////////////
 //               Definitions of macros
 /////////////////////////////////////////////////////////////////////////////
 
-#define BCM2835_PERI_BASE  0x20000000
-#define GPIO_BASE          (BCM2835_PERI_BASE + 0x200000) // GPIO registers
+#define BCM2835_PERI_BASE  0x20000000  // RPi1
+#define BCM2836_PERI_BASE  0x3f000000  // RPi2
+#define PERI_BASE BCM2836_PERI_BASE    // Assume RPi2
+#define GPIO_BASE (PERI_BASE + 0x200000) // GPIO registers
 
 // GPIO registers, 32-bit offset from GPIO_BASE
 #define GPFSEL0_OFFSET32   0
@@ -47,6 +52,11 @@
 #define GPLEV1_OFFSET32   14
 
 #define PAGE_SIZE  (4*1024)  // Kernel page size
+
+#define CHECK_PIN_ALLOWED(pin)   \
+  if (pin > GPIO_MAX_PIN) {      \
+    return GPIO_PIN_NOT_ALLOWED; \
+  }
 
 /////////////////////////////////////////////////////////////////////////////
 //               Public member functions
@@ -119,9 +129,7 @@ long gpio::finalize(void)
 long gpio::set_function(uint8_t pin,
 			GPIO_FUNCTION func)
 {
-  if (pin > GPIO_MAX_PIN) {
-    return GPIO_PIN_NOT_ALLOWED;
-  }
+  CHECK_PIN_ALLOWED(pin);
 
   long offset32;
   switch (pin / 10) {
@@ -166,9 +174,7 @@ long gpio::set_function(uint8_t pin,
 long gpio::get_function(uint8_t pin,
 			GPIO_FUNCTION &func)
 {
-  if (pin > GPIO_MAX_PIN) {
-    return GPIO_PIN_NOT_ALLOWED;
-  }
+  CHECK_PIN_ALLOWED(pin);
 
   long offset32;
   switch (pin / 10) {
@@ -199,9 +205,7 @@ long gpio::get_function(uint8_t pin,
 long gpio::write(uint8_t pin,
 		 uint8_t value)
 {
-  if (pin > GPIO_MAX_PIN) {
-    return GPIO_PIN_NOT_ALLOWED;
-  }
+  CHECK_PIN_ALLOWED(pin);
 
   // Note!
   // Writing 0 to a bit has no effect on corresponding pin.
@@ -221,9 +225,7 @@ long gpio::write(uint8_t pin,
 long gpio::read(uint8_t pin,
 		uint8_t &value)
 {
-  if (pin > GPIO_MAX_PIN) {
-    return GPIO_PIN_NOT_ALLOWED;
-  }
+  CHECK_PIN_ALLOWED(pin);
 
   // Read actual value of pin
   if ( *(m_gpio + GPLEV0_OFFSET32) & (1 << pin)  ) {
